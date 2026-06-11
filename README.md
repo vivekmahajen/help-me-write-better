@@ -106,9 +106,9 @@ print(result.text, "->", result.model)
 
 ## How it works
 
-- `prompts/operator_prompt.md` — the operator system prompt that powers the
-  engine (the hard rules, modes, quality bar, formatting standards, output
-  contract). Edit this to tune behavior.
+- `src/write_better/operator_prompt.md` — the operator system prompt that powers
+  the engine (the hard rules, modes, quality bar, formatting standards, output
+  contract). Ships as package data; edit this to tune behavior.
 - `src/write_better/modes.py` — the 13 services and their routing tiers.
 - `src/write_better/prompt.py` — loads the operator prompt and builds the
   per-request `INPUTS` block.
@@ -126,8 +126,7 @@ The suite ships an HTTP API so it runs as a serverless function on Vercel:
 - `api/index.py` — the Vercel entrypoint (serves the WSGI `app`).
 - `src/write_better/web.py` — the actual app: `GET` returns service info, `POST`
   runs the engine on a JSON body.
-- `vercel.json` — bundles `src/` + `prompts/` into the function and routes all
-  paths to it.
+- `vercel.json` — bundles `src/` into the function and routes all paths to it.
 
 ```bash
 vercel deploy

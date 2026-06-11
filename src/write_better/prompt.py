@@ -5,9 +5,10 @@ from __future__ import annotations
 from functools import lru_cache
 from pathlib import Path
 
-# prompts/operator_prompt.md lives at the repo root, two levels up from this file
-# (src/write_better/prompt.py -> repo root).
-_PROMPT_PATH = Path(__file__).resolve().parents[2] / "prompts" / "operator_prompt.md"
+# The operator prompt ships as package data, next to this module. Loading it by
+# its on-disk neighbour works in every deployment mode (source checkout, pip-
+# installed package, gunicorn, Vercel) without depending on the repo layout.
+_PROMPT_PATH = Path(__file__).resolve().with_name("operator_prompt.md")
 
 VALID_FORMATS = (
     "markdown", "html", "plain", "rich-text", "email", "report", "doc", "slide-outline",
@@ -22,7 +23,7 @@ def system_prompt() -> str:
     except FileNotFoundError as exc:  # pragma: no cover - defensive
         raise FileNotFoundError(
             f"operator prompt not found at {_PROMPT_PATH}. "
-            "It should ship with the package at prompts/operator_prompt.md."
+            "It should ship with the package as write_better/operator_prompt.md."
         ) from exc
 
 
