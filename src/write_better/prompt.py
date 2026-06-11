@@ -60,6 +60,7 @@ def build_user_message(
     reading_level: str | None = None,
     language: str | None = None,
     free_form: str | None = None,
+    service_instructions: list[tuple[str, str]] | None = None,
 ) -> str:
     """Assemble the INPUTS block the engine expects, matching the operator contract."""
     services = ", ".join(service_names) if service_names else "(infer from the request)"
@@ -75,6 +76,14 @@ def build_user_message(
     ]
     if free_form:
         lines.append(f"REQUEST       = {free_form}")
+
+    if service_instructions:
+        lines.append("")
+        lines.append("SERVICE INSTRUCTIONS (follow each precisely, within the HARD RULES):")
+        for name, instruction in service_instructions:
+            lines.append(f"--- {name} ---")
+            lines.append(instruction)
+
     lines += [
         "",
         "TEXT =",

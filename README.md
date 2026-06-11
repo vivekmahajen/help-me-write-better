@@ -9,7 +9,12 @@ engine, with a model-routing layer that keeps cost-to-serve low.
 
 ## What it does
 
-One engine, thirteen bundled services (the **modes**):
+One engine, **36 bundled services**. Thirteen core modes are defined in the
+operator prompt; the rest are extended, name-only services that each carry their
+own instruction (e.g. `tone-detect`, `readability`, `humanize`, `fact-flag`,
+`headline`, `score`). Run `write-better --list` to see them all.
+
+The thirteen core **modes**:
 
 | | Service | What it does | Routed model |
 |---|---|---|---|
@@ -109,7 +114,9 @@ print(result.text, "->", result.model)
 - `src/write_better/operator_prompt.md` — the operator system prompt that powers
   the engine (the hard rules, modes, quality bar, formatting standards, output
   contract). Ships as package data; edit this to tune behavior.
-- `src/write_better/modes.py` — the 13 services and their routing tiers.
+- `src/write_better/modes.py` — all 36 services and their routing tiers. Core
+  modes (A–M) are defined in the operator prompt; extended services carry their
+  own `instruction`, which the engine injects per request.
 - `src/write_better/prompt.py` — loads the operator prompt and builds the
   per-request `INPUTS` block.
 - `src/write_better/engine.py` — model routing + the Claude call (streaming).
