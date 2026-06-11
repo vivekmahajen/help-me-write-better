@@ -1,0 +1,11 @@
+{
+  "name": "help-me-write-better-word-addin",
+  "version": "1.0.0",
+  "description": "Word (Office.js) add-in — thin client of the gateway",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node --test"
+  },
+  "engines": { "node": ">=18" }
+}

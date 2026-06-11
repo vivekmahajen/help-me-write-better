@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Help Me Write Better</title>
+  <script src="https://appsforoffice.microsoft.com/lib/1/hosted/office.js"></script>
+  <style>
+    body { font: 14px system-ui, sans-serif; margin: 0; padding: 12px; color: #1a1a1a; }
+    h1 { font-size: 16px; margin: 0 0 8px; }
+    details { margin-bottom: 10px; }
+    summary { cursor: pointer; color: #2563eb; }
+    label { display: block; margin: 8px 0 2px; font-size: 12px; font-weight: 600; }
+    input, select { width: 100%; padding: 6px; box-sizing: border-box; border: 1px solid #ccc; border-radius: 6px; }
+    .actions { display: flex; gap: 8px; margin: 10px 0; }
+    button { padding: 8px 12px; border: 0; border-radius: 6px; background: #2563eb; color: #fff; font-weight: 600; cursor: pointer; }
+    button.secondary { background: #eef; color: #2563eb; }
+    #status { font-size: 12px; color: #555; min-height: 16px; margin: 6px 0; }
+    #status.err { color: #c00; }
+    .item { border: 1px solid #eee; border-left: 3px solid #ccc; border-radius: 6px; padding: 8px; margin: 6px 0; }
+    .item.sev-high { border-left-color: #dc2626; }
+    .item.sev-medium { border-left-color: #d97706; }
+    .item .msg { font-weight: 600; }
+    .item .ctx { font-size: 12px; color: #555; margin: 4px 0; }
+    .item button { margin-top: 4px; padding: 4px 8px; font-size: 12px; }
+    .muted { color: #888; }
+  </style>
+</head>
+<body>
+  <h1>Help Me Write Better</h1>
+
+  <details>
+    <summary>Settings</summary>
+    <label for="baseUrl">API base URL</label>
+    <input id="baseUrl" type="url">
+    <label for="apiKey">API key</label>
+    <input id="apiKey" type="password" placeholder="wbk_…">
+    <button id="save" style="margin-top:8px">Save</button>
+  </details>
+
+  <div class="actions">
+    <button id="check">Check document</button>
+  </div>
+
+  <div class="actions">
+    <select id="service" aria-label="Service">
+      <option value="clarify">clarify</option>
+      <option value="tighten">tighten</option>
+      <option value="correct">correct</option>
+      <option value="paraphrase">paraphrase</option>
+    </select>
+    <button id="improve" class="secondary">Improve selection</button>
+  </div>
+
+  <div id="status"></div>
+  <div id="results"></div>
+
+  <script type="module" src="taskpane.js"></script>
+</body>
+</html>
