@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <style>
+    body { font: 13px system-ui, sans-serif; width: 220px; margin: 0; padding: 12px; }
+    h1 { font-size: 14px; margin: 0 0 8px; }
+    .row { display: flex; align-items: center; justify-content: space-between; margin: 8px 0; }
+    #state { color: #666; }
+    a { color: #2563eb; cursor: pointer; }
+    button { padding: 4px 10px; border: 1px solid #ccc; border-radius: 6px; background: #f6f6f6; cursor: pointer; }
+  </style>
+</head>
+<body>
+  <h1>Help Me Write Better</h1>
+  <div class="row"><span id="state">…</span></div>
+  <div class="row">
+    <span>Enabled</span>
+    <button id="toggle">…</button>
+  </div>
+  <div class="row"><a id="opts">Settings</a></div>
+  <script src="popup.js"></script>
+</body>
+</html>

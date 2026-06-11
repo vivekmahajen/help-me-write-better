@@ -1,0 +1,51 @@
+.wb-card {
+  position: absolute;
+  z-index: 2147483647;
+  max-width: 360px;
+  background: #171b2e;
+  color: #e8eaf2;
+  border: 1px solid #283049;
+  border-radius: 10px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+  font: 13px/1.4 system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+  padding: 8px;
+  display: none;
+}
+.wb-card-header {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #9aa3b8;
+  padding: 2px 4px 6px;
+}
+.wb-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 4px;
+  border-top: 1px solid #232a42;
+}
+.wb-msg { flex: 1; }
+.wb-item.wb-sev-high .wb-msg { color: #ff9ea6; }
+.wb-item.wb-sev-medium .wb-msg { color: #ffd98a; }
+.wb-fix {
+  background: #6ea8fe;
+  color: #0a0e1a;
+  border: 0;
+  border-radius: 6px;
+  padding: 3px 8px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.wb-dismiss {
+  background: transparent;
+  color: #9aa3b8;
+  border: 0;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+/* Optional inline underlines for contenteditable surfaces. */
+.wb-underline-high { border-bottom: 2px solid #ff6b6b; }
+.wb-underline-medium { border-bottom: 2px solid #f0c14b; }
+.wb-underline-low { border-bottom: 2px dotted #6ea8fe; }
