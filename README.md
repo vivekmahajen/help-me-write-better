@@ -119,6 +119,45 @@ print(result.text, "->", result.model)
   margin recalculates.
 - `docs/PRICING.md` — recommended end-user pricing and the margin rationale.
 
+## Deploy (Vercel)
+
+The suite ships an HTTP API so it runs as a serverless function on Vercel:
+
+- `api/index.py` — the Vercel entrypoint (serves the WSGI `app`).
+- `src/write_better/web.py` — the actual app: `GET` returns service info, `POST`
+  runs the engine on a JSON body.
+- `vercel.json` — bundles `src/` + `prompts/` into the function and routes all
+  paths to it.
+
+```bash
+vercel deploy
+# set the server-side credential the engine needs:
+vercel env add ANTHROPIC_API_KEY
+```
+
+Once deployed:
+
+```bash
+# Discover the API
+curl https://<your-app>.vercel.app/
+
+# Improve some text
+curl -X POST https://<your-app>.vercel.app/ \
+  -H 'Content-Type: application/json' \
+  -d '{"text":"their going to the store","services":"correct","format":"plain"}'
+```
+
+`POST` body fields: `text` (required), `services`, `format`, `show_changes`,
+`tone`, `audience`, `length`, `reading_level`, `language`, `request`, `model`,
+`effort`. The response is `{ text, model, services, usage }`.
+
+You can also run the same app locally with any WSGI server:
+
+```bash
+pip install gunicorn
+gunicorn write_better.web:app
+```
+
 ## Develop
 
 ```bash
