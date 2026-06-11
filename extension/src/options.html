@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Help Me Write Better — Settings</title>
+  <style>
+    body { font: 14px system-ui, sans-serif; max-width: 440px; margin: 32px auto; color: #1a1a1a; }
+    h1 { font-size: 18px; }
+    label { display: block; margin: 14px 0 4px; font-weight: 600; }
+    input { width: 100%; padding: 8px; box-sizing: border-box; border: 1px solid #ccc; border-radius: 6px; }
+    button { margin-top: 16px; padding: 9px 16px; border: 0; border-radius: 6px; background: #2563eb; color: #fff; font-weight: 600; cursor: pointer; }
+    .hint { color: #666; font-size: 12px; margin-top: 4px; }
+    #status { margin-top: 12px; color: #16a34a; }
+  </style>
+</head>
+<body>
+  <h1>Help Me Write Better</h1>
+  <label for="baseUrl">API base URL</label>
+  <input id="baseUrl" type="url" placeholder="https://your-deployment.example">
+  <label for="apiKey">API key</label>
+  <input id="apiKey" type="password" placeholder="wbk_…">
+  <div class="hint">Create a key in your account (<code>write-better-admin create-key</code>). Stored locally; sent only to your API base URL.</div>
+  <button id="save">Save</button>
+  <div id="status"></div>
+  <script src="options.js"></script>
+</body>
+</html>

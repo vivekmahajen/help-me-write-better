@@ -75,9 +75,10 @@ Per the build order, **not** in this slice:
   Stripe billing are all done (see the table above). The web UI is still the
   unauthenticated demo — routing it through the gateway with login is a small
   follow-up.
-- **Phase 2 started:** the real-time check path (#1) is done (see the table). Next
-  is the **browser extension (#2)** — a thin client of `POST /v1/check` rendering
-  the shared suggestion model as inline underlines + accept/dismiss cards.
+- **Phase 2 in progress:** the real-time check path (#1) and the **browser
+  extension (#2)** are done (extension lives in `extension/` — a Manifest V3 thin
+  client of `POST /v1/check` for Gmail + web fields). Next: the **Word + Google
+  Docs add-ins (#3)** — Docs needs the add-on path since it renders to canvas.
 - **Phase 2:** the low-latency real-time check path (#1), then the browser
   extension (#2).
 - **Phase 3:** Word + Docs add-ins (#3).

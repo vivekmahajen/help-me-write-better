@@ -1,0 +1,22 @@
+{
+  "manifest_version": 3,
+  "name": "Help Me Write Better",
+  "version": "1.0.0",
+  "description": "Real-time writing suggestions in Gmail and web text fields.",
+  "permissions": ["storage"],
+  "host_permissions": ["<all_urls>"],
+  "background": { "service_worker": "src/background.js", "type": "module" },
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["src/core.js", "src/content.js"],
+      "css": ["src/styles.css"],
+      "run_at": "document_idle"
+    }
+  ],
+  "options_page": "src/options.html",
+  "action": {
+    "default_popup": "src/popup.html",
+    "default_title": "Help Me Write Better"
+  }
+}

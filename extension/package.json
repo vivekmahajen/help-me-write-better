@@ -1,0 +1,11 @@
+{
+  "name": "help-me-write-better-extension",
+  "version": "1.0.0",
+  "description": "Manifest V3 browser extension — real-time writing suggestions",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node --test"
+  },
+  "engines": { "node": ">=18" }
+}
