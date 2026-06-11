@@ -1,0 +1,14 @@
+{
+  "name": "help-me-write-better-desktop",
+  "version": "1.0.0",
+  "description": "Cross-platform desktop app (Electron) wrapping the web experience",
+  "private": true,
+  "type": "module",
+  "main": "src/main.js",
+  "scripts": {
+    "start": "electron .",
+    "test": "node --test"
+  },
+  "engines": { "node": ">=18" },
+  "devDependencies": { "electron": ">=28" }
+}
