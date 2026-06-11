@@ -136,7 +136,10 @@ runtime:
   (`Accept: text/html`) get a single-page UI; everyone else gets JSON service
   info. `POST` runs the engine on a JSON body.
 - `src/write_better/ui.py` — the self-contained HTML page (no external assets);
-  it calls the same `POST` endpoint.
+  it calls the same `POST` endpoint. A **Try a sample** button loads a
+  representative input for the selected service and runs it.
+- `src/write_better/samples.py` — a sample input per service, exposed at `GET /`
+  (JSON) under `samples` so any client can offer the same "try it" affordance.
 
 Open the deployed URL in a browser for the UI; `curl` it for the JSON API.
 
