@@ -38,7 +38,7 @@ layered around it.
 | Web sessions + login | `platform/webauth.py` | Cookie sessions; `POST /auth/signup\|login\|logout`, `GET /auth/me`. End-user surfaces auth here; programmatic uses API keys. |
 | OAuth (Google/Microsoft) | `platform/oauth.py` + webauth | Real OIDC authorization-code flow (injectable transport); `GET /auth/oauth/{provider}/start\|callback`. State-cookie CSRF check; links to existing email or creates a passwordless user. |
 | Metering + caps | `platform/metering.py` | Premium-model generations metered per `plans.py` monthly cap; routine/standard uncapped. Enforced **before** spending on the engine. |
-| Billing | `platform/billing.py` | `BillingProvider` interface. `LocalBillingProvider` works with no keys; `StripeBillingProvider` is a clear stub (documents the calls, raises until wired). |
+| Billing | `platform/billing.py` + `billing_web.py` | `BillingProvider` interface. `LocalBillingProvider` works with no keys. **`StripeBillingProvider` is fully wired** — Checkout + customer portal sessions over the Stripe REST API, plus webhook signature verification and handlers (`checkout.session.completed`/`subscription.*` set the plan; `subscription.deleted`/`payment_failed` downgrade to Free). `GET /billing/plans`, `POST /billing/checkout\|portal\|webhook`. |
 | Saved docs + versions | `platform/store.py` + gateway | `POST/GET /v1/documents`, `GET/PATCH/DELETE /v1/documents/{id}`, `GET/POST /v1/documents/{id}/versions`. Bodies stored **only** on explicit save; strict per-user ownership. |
 | Preferences sync | `platform/store.py` + gateway | `GET/PUT /v1/preferences` (JSON blob: default tone/audience/dialect). |
 | History | `platform/store.py` + gateway | `GET /v1/history` over the usage log — **metadata only, no document bodies**. |
@@ -69,10 +69,12 @@ that would exceed the plan's premium cap is rejected with **402** (`cap_reached`
 
 Per the build order, **not** in this slice:
 
-- **Phase 1 remainder:** real Stripe wiring (Checkout, customer portal,
-  `invoice.paid`/`payment_failed` webhooks) — `StripeBillingProvider` is still a
-  stub. *(Web login + OAuth, saved documents, versions, preferences, history, the
-  OpenAPI spec, and the JS/TS SDK are done — see the table above.)*
+- **Phase 1 is complete.** Accounts, API keys, metering + caps, saved docs +
+  history, preferences, the OpenAPI spec + JS/TS SDK, web login + OAuth, and real
+  Stripe billing are all done (see the table above). The web UI is still the
+  unauthenticated demo — routing it through the gateway with login is a small
+  follow-up. Next up the program: **Phase 2** — the real-time check path (#1)
+  then the browser extension (#2).
 - **Phase 2:** the low-latency real-time check path (#1), then the browser
   extension (#2).
 - **Phase 3:** Word + Docs add-ins (#3).
