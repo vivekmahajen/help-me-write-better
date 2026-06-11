@@ -22,10 +22,21 @@ from ..engine import Request, improve as engine_improve
 from ..modes import resolve_services
 from ..prompt import VALID_FORMATS
 from . import accounts, metering
+from .openapi import DOCS_PAGE, spec as openapi_spec
 from .store import Store
 
 API_VERSION = "v1"
 _CORS = ("Access-Control-Allow-Origin", "*")
+
+
+def _html(start_response, status: str, html: str):
+    body = html.encode("utf-8")
+    start_response(status, [
+        ("Content-Type", "text/html; charset=utf-8"),
+        ("Content-Length", str(len(body))),
+        _CORS,
+    ])
+    return [body]
 
 
 def _json(start_response, status: str, payload: dict, extra=()):
@@ -94,8 +105,16 @@ def make_gateway(store: Store, engine=engine_improve):
                     "GET|PATCH|DELETE /v1/documents/{id}": "fetch / rename / delete a document",
                     "GET|POST /v1/documents/{id}/versions": "list / add a version",
                     "POST /v1/improve": "run the engine (metered, capped)",
+                    "GET /v1/openapi.json": "the OpenAPI 3.1 contract",
+                    "GET /v1/docs": "human-readable API docs",
                 },
             })
+
+        # Public: machine-readable spec + docs viewer.
+        if path == "/v1/openapi.json" and method == "GET":
+            return _json(start_response, "200 OK", openapi_spec())
+        if path == "/v1/docs" and method == "GET":
+            return _html(start_response, "200 OK", DOCS_PAGE)
 
         # Everything else requires authentication.
         user = accounts.authenticate_key(store, _bearer(environ))
