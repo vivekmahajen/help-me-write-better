@@ -1,0 +1,84 @@
+"""Load the operator system prompt and build the per-request INPUTS block."""
+
+from __future__ import annotations
+
+from functools import lru_cache
+from pathlib import Path
+
+# prompts/operator_prompt.md lives at the repo root, two levels up from this file
+# (src/write_better/prompt.py -> repo root).
+_PROMPT_PATH = Path(__file__).resolve().parents[2] / "prompts" / "operator_prompt.md"
+
+VALID_FORMATS = (
+    "markdown", "html", "plain", "rich-text", "email", "report", "doc", "slide-outline",
+)
+
+
+@lru_cache(maxsize=1)
+def system_prompt() -> str:
+    """Return the operator prompt that powers the engine (cached after first read)."""
+    try:
+        return _PROMPT_PATH.read_text(encoding="utf-8").strip()
+    except FileNotFoundError as exc:  # pragma: no cover - defensive
+        raise FileNotFoundError(
+            f"operator prompt not found at {_PROMPT_PATH}. "
+            "It should ship with the package at prompts/operator_prompt.md."
+        ) from exc
+
+
+def _target_block(
+    audience: str | None,
+    tone: str | None,
+    length: str | None,
+    reading_level: str | None,
+    language: str | None,
+) -> str:
+    parts = []
+    if audience:
+        parts.append(f"audience: {audience}")
+    if tone:
+        parts.append(f"tone: {tone}")
+    if length:
+        parts.append(f"length: {length}")
+    if reading_level:
+        parts.append(f"reading level: {reading_level}")
+    if language:
+        parts.append(f"language: {language}")
+    return "; ".join(parts) if parts else "(unspecified — keep the author's defaults)"
+
+
+def build_user_message(
+    *,
+    text: str,
+    service_names: list[str],
+    output_format: str,
+    show_changes: bool,
+    audience: str | None = None,
+    tone: str | None = None,
+    length: str | None = None,
+    reading_level: str | None = None,
+    language: str | None = None,
+    free_form: str | None = None,
+) -> str:
+    """Assemble the INPUTS block the engine expects, matching the operator contract."""
+    services = ", ".join(service_names) if service_names else "(infer from the request)"
+    target = _target_block(audience, tone, length, reading_level, language)
+
+    lines = [
+        "Apply the requested service(s) to TEXT and return the result per the OUTPUT CONTRACT.",
+        "",
+        f"SERVICE(S)    = {services}",
+        f"TARGET        = {target}",
+        f"OUTPUT_FORMAT = {output_format}",
+        f"SHOW_CHANGES  = {str(show_changes).lower()}",
+    ]
+    if free_form:
+        lines.append(f"REQUEST       = {free_form}")
+    lines += [
+        "",
+        "TEXT =",
+        '"""',
+        text,
+        '"""',
+    ]
+    return "\n".join(lines)
