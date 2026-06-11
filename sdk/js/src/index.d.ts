@@ -50,6 +50,26 @@ export interface Suggestion {
 
 export interface CheckResponse { suggestions: Suggestion[]; count: number; }
 
+export interface AnalyticsSummary {
+  calls: number;
+  words: number;
+  suggestions: number;
+  by_service: Record<string, number>;
+  by_issue_type: Record<string, number>;
+  by_day: Record<string, { calls: number; words: number }>;
+  estimated_minutes_saved: number;
+}
+
+export interface AnalyticsResponse {
+  window_days: number;
+  summary: AnalyticsSummary;
+  insights: {
+    this_week: AnalyticsSummary;
+    last_week: AnalyticsSummary;
+    deltas: { calls: number; words: number; suggestions: number };
+  };
+}
+
 export interface Account { email: string; plan: string; }
 
 export interface UsageReport {
@@ -101,6 +121,7 @@ export class WriteBetterClient {
   check(text: string, previous?: string): Promise<CheckResponse>;
   getAccount(): Promise<Account>;
   getUsage(): Promise<UsageReport>;
+  getAnalytics(windowDays?: number): Promise<AnalyticsResponse>;
   getHistory(): Promise<HistoryEvent[]>;
   getPreferences(): Promise<Preferences>;
   setPreferences(prefs: Preferences): Promise<Preferences>;

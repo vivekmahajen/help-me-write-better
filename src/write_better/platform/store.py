@@ -46,7 +46,10 @@ CREATE TABLE IF NOT EXISTS usage_events (
     model         TEXT NOT NULL,
     premium       INTEGER NOT NULL DEFAULT 0,    -- consumed a premium generation?
     input_tokens  INTEGER NOT NULL DEFAULT 0,
-    output_tokens INTEGER NOT NULL DEFAULT 0
+    output_tokens INTEGER NOT NULL DEFAULT 0,
+    words         INTEGER NOT NULL DEFAULT 0,    -- analytics: words in the input
+    suggestions   INTEGER NOT NULL DEFAULT 0,    -- analytics: issues found (check)
+    issue_types   TEXT NOT NULL DEFAULT '{}'     -- analytics: {type: count} JSON
 );
 CREATE INDEX IF NOT EXISTS ix_usage_user_ts ON usage_events(user_id, ts);
 
@@ -100,6 +103,9 @@ CREATE TABLE IF NOT EXISTS oauth_identities (
 # Columns added after the initial release; applied as idempotent migrations.
 _MIGRATIONS = [
     ("users", "stripe_customer_id", "TEXT"),
+    ("usage_events", "words", "INTEGER NOT NULL DEFAULT 0"),
+    ("usage_events", "suggestions", "INTEGER NOT NULL DEFAULT 0"),
+    ("usage_events", "issue_types", "TEXT NOT NULL DEFAULT '{}'"),
 ]
 
 
@@ -196,16 +202,39 @@ class Store:
     # --- usage events --------------------------------------------------------
 
     def insert_usage(self, user_id: int, services: str, model: str, premium: bool,
-                     input_tokens: int, output_tokens: int, ts: Optional[int] = None) -> dict:
+                     input_tokens: int, output_tokens: int, ts: Optional[int] = None,
+                     words: int = 0, suggestions: int = 0,
+                     issue_types: Optional[dict] = None) -> dict:
         with self._lock:
             cur = self._conn.execute(
                 "INSERT INTO usage_events(user_id, ts, services, model, premium, "
-                "input_tokens, output_tokens) VALUES (?,?,?,?,?,?,?)",
+                "input_tokens, output_tokens, words, suggestions, issue_types) "
+                "VALUES (?,?,?,?,?,?,?,?,?,?)",
                 (user_id, ts or int(time.time()), services, model,
-                 1 if premium else 0, input_tokens, output_tokens),
+                 1 if premium else 0, input_tokens, output_tokens,
+                 words, suggestions, json.dumps(issue_types or {})),
             )
             self._conn.commit()
             return self._row("usage_events", cur.lastrowid)
+
+    def events_between(self, user_id: int, since_ts: int,
+                       until_ts: Optional[int] = None) -> list[dict]:
+        """Raw events in [since_ts, until_ts) for analytics aggregation."""
+        if until_ts is None:
+            rows = self._conn.execute(
+                "SELECT ts, services, model, premium, input_tokens, output_tokens, "
+                "words, suggestions, issue_types FROM usage_events "
+                "WHERE user_id = ? AND ts >= ? ORDER BY ts",
+                (user_id, since_ts),
+            ).fetchall()
+        else:
+            rows = self._conn.execute(
+                "SELECT ts, services, model, premium, input_tokens, output_tokens, "
+                "words, suggestions, issue_types FROM usage_events "
+                "WHERE user_id = ? AND ts >= ? AND ts < ? ORDER BY ts",
+                (user_id, since_ts, until_ts),
+            ).fetchall()
+        return [dict(r) for r in rows]
 
     def count_premium_since(self, user_id: int, since_ts: int) -> int:
         row = self._conn.execute(
