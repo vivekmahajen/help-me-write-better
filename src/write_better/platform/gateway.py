@@ -25,7 +25,7 @@ from ..engine import Request, improve as engine_improve
 from ..modes import resolve_services
 from ..prompt import VALID_FORMATS
 from ..realtime import check_text
-from . import accounts, analytics, metering
+from . import accounts, analytics, metering, teams
 from .openapi import DOCS_PAGE, spec as openapi_spec
 from .store import Store
 
@@ -170,9 +170,99 @@ def make_gateway(store: Store, engine=engine_improve):
                 "insights": analytics.weekly_insights(store, user["id"]),
             })
 
+        if rest and rest[0] == "team":
+            return _team(store, user, rest, method, environ, start_response)
+
         return _json(start_response, "404 Not Found", {"error": "no such endpoint"})
 
     return app
+
+
+def _team(store, user, rest, method, environ, start_response):
+    uid = user["id"]
+
+    if rest == ["team"]:
+        if method == "GET":
+            org = store.get_org_for_user(uid)
+            if not org:
+                return _json(start_response, "200 OK", {"org": None})
+            return _json(start_response, "200 OK", {"org": _org_view(store, org, uid)})
+        if method == "POST":
+            if store.get_org_for_user(uid):
+                return _json(start_response, "400 Bad Request",
+                             {"error": "you already belong to a team"})
+            data, err = _read_json(environ)
+            if err:
+                return _json(start_response, "400 Bad Request", {"error": err})
+            name = (data.get("name") or "").strip()
+            if not name:
+                return _json(start_response, "400 Bad Request", {"error": "'name' is required"})
+            org = teams.create_org(store, name, user, plan=user.get("plan", "business"))
+            return _json(start_response, "201 Created", {"org": _org_view(store, org, uid)})
+        return _json(start_response, "405 Method Not Allowed", {"error": "use GET or POST"})
+
+    org = store.get_org_for_user(uid)
+    if not org:
+        return _json(start_response, "404 Not Found", {"error": "you are not in a team"})
+    org_id = org["id"]
+
+    try:
+        if rest == ["team", "style-guide"]:
+            if method == "GET":
+                return _json(start_response, "200 OK",
+                             {"style_guide": teams.get_style_guide(store, org_id)})
+            if method in ("PUT", "POST"):
+                data, err = _read_json(environ)
+                if err:
+                    return _json(start_response, "400 Bad Request", {"error": err})
+                guide = teams.set_style_guide(store, org_id, uid, data)
+                return _json(start_response, "200 OK", {"style_guide": guide})
+
+        if rest == ["team", "members"]:
+            if method == "GET":
+                return _json(start_response, "200 OK",
+                             {"members": store.list_org_members(org_id)})
+            if method == "POST":
+                data, err = _read_json(environ)
+                if err:
+                    return _json(start_response, "400 Bad Request", {"error": err})
+                target = store.get_user_by_email((data.get("email") or "").strip())
+                if not target:
+                    return _json(start_response, "404 Not Found",
+                                 {"error": "no user with that email"})
+                member = teams.add_member(store, org_id, uid, target,
+                                          role=data.get("role", "member"))
+                return _json(start_response, "201 Created", {"member": member})
+
+        if rest[:2] == ["team", "members"] and len(rest) == 3 and method == "DELETE":
+            teams.remove_member(store, org_id, uid, int(rest[2]))
+            return _json(start_response, "200 OK", {"removed": True})
+
+        if rest == ["team", "analytics"] and method == "GET":
+            teams.require_admin(store, org_id, uid)
+            since = int(time.time()) - 30 * 86400
+            return _json(start_response, "200 OK",
+                         {"rollup": analytics.rollup(store, store.org_member_ids(org_id), since)})
+
+    except teams.PermissionError_ as exc:
+        return _json(start_response, "403 Forbidden", {"error": str(exc)})
+    except teams.SeatLimitError as exc:
+        return _json(start_response, "402 Payment Required",
+                     {"error": str(exc), "code": "seat_limit"})
+    except ValueError as exc:
+        return _json(start_response, "400 Bad Request", {"error": str(exc)})
+
+    return _json(start_response, "404 Not Found", {"error": "no such endpoint"})
+
+
+def _org_view(store, org, user_id):
+    member = store.get_org_member(org["id"], user_id)
+    return {
+        "id": org["id"], "name": org["name"], "plan": org["plan"],
+        "seats": org["seats"], "seats_used": store.count_org_members(org["id"]),
+        "role": member["role"] if member else None,
+        "members": store.list_org_members(org["id"]),
+    }
 
 
 def _check(store, user, environ, start_response):
@@ -184,7 +274,13 @@ def _check(store, user, environ, start_response):
     if not isinstance(text, str):
         return _json(start_response, "400 Bad Request", {"error": "'text' (string) is required"})
     previous = data.get("previous")
-    suggestions = check_text(text, previous if isinstance(previous, str) else None)
+    # A team member's check enforces the org style guide (banned/preferred terms).
+    org = store.get_org_for_user(user["id"])
+    banned, preferred = ([], {})
+    if org:
+        banned, preferred = teams.banned_and_preferred(teams.get_style_guide(store, org["id"]))
+    suggestions = check_text(text, previous if isinstance(previous, str) else None,
+                             banned_terms=banned, preferred_terms=preferred)
     issue_types = Counter(s.type for s in suggestions)
 
     # Meter every call (hard rule #3) — local checks are uncapped, ~0 cost.
@@ -311,6 +407,10 @@ def _improve(store, engine, user, environ, start_response):
             "quota": q,
         })
 
+    # Inject the team style guide (if any) so every member's writing conforms.
+    org = store.get_org_for_user(user["id"])
+    style_guide = teams.render_style_guide(teams.get_style_guide(store, org["id"])) if org else None
+
     req = Request(
         text=text,
         services=[m.name for m in modes],
@@ -324,6 +424,7 @@ def _improve(store, engine, user, environ, start_response):
         free_form=data.get("request"),
         model=data.get("model"),
         effort=data.get("effort", "high"),
+        style_guide=style_guide or None,
     )
 
     try:

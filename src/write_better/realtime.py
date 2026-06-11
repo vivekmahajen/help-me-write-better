@@ -187,14 +187,36 @@ def sentences(text: str) -> list[tuple[int, int, str]]:
     return spans
 
 
+def brand_suggestions(text: str, banned_terms=None, preferred_terms=None) -> list[Suggestion]:
+    """Flag team-banned terms (offsets absolute in ``text``).
+
+    A term with a preferred replacement suggests it; otherwise it's flagged with
+    no replacement. Used to enforce a team style guide on the real-time path.
+    """
+    banned = list(banned_terms or [])
+    preferred = dict(preferred_terms or {})
+    terms = {t.lower() for t in banned} | {k.lower() for k in preferred}
+    if not terms:
+        return []
+    pattern = r"\b(" + "|".join(re.escape(t) for t in terms) + r")\b"
+    out = []
+    for m in re.finditer(pattern, text, re.IGNORECASE):
+        repl = preferred.get(m.group(0).lower())
+        replacements = (_preserve_case(m.group(0), repl),) if repl else ()
+        out.append(Suggestion(m.start(), m.end(), "style", "medium",
+                              "Avoid this term (team style guide).", replacements))
+    return out
+
+
 def check_text(text: str, previous: Optional[str] = None,
-               deep_check: Optional[Callable[[str], list[Suggestion]]] = None) -> list[Suggestion]:
+               deep_check: Optional[Callable[[str], list[Suggestion]]] = None,
+               banned_terms=None, preferred_terms=None) -> list[Suggestion]:
     """Return suggestions for ``text``.
 
     If ``previous`` is given, only changed sentences are re-checked (the rest are
     assumed unchanged). ``deep_check`` is an optional per-sentence hook (e.g. a
-    cheap-model pass) returning span-relative suggestions — omitted by default so
-    the path stays local and free.
+    cheap-model pass). ``banned_terms``/``preferred_terms`` enforce a team style
+    guide across the whole text.
     """
     unchanged = set()
     if previous is not None:
@@ -209,4 +231,6 @@ def check_text(text: str, previous: Optional[str] = None,
         if deep_check is not None:
             for sug in deep_check(span):
                 out.append(sug.shifted(start))
+
+    out.extend(brand_suggestions(text, banned_terms, preferred_terms))
     return list(_dedupe_sort(out))

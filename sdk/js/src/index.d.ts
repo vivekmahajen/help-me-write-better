@@ -70,6 +70,27 @@ export interface AnalyticsResponse {
   };
 }
 
+export interface StyleGuide {
+  tone?: string;
+  formality?: string;
+  banned_terms?: string[];
+  preferred_terms?: Record<string, string>;
+  formatting_rules?: string;
+  notes?: string;
+}
+
+export interface Member { user_id: number; email: string; role: string; }
+
+export interface Org {
+  id: number;
+  name: string;
+  plan: string;
+  seats: number;
+  seats_used: number;
+  role: string | null;
+  members: Member[];
+}
+
 export interface Account { email: string; plan: string; }
 
 export interface UsageReport {
@@ -125,6 +146,14 @@ export class WriteBetterClient {
   getHistory(): Promise<HistoryEvent[]>;
   getPreferences(): Promise<Preferences>;
   setPreferences(prefs: Preferences): Promise<Preferences>;
+  getTeam(): Promise<Org | null>;
+  createTeam(name: string): Promise<Org>;
+  listMembers(): Promise<Member[]>;
+  addMember(email: string, role?: "admin" | "member"): Promise<Member>;
+  removeMember(userId: number): Promise<boolean>;
+  getStyleGuide(): Promise<StyleGuide>;
+  setStyleGuide(guide: StyleGuide): Promise<StyleGuide>;
+  getTeamAnalytics(): Promise<Record<string, unknown>>;
   listDocuments(): Promise<DocumentSummary[]>;
   createDocument(content: string, title?: string): Promise<Document>;
   getDocument(id: number): Promise<Document>;

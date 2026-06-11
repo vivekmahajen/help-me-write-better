@@ -130,6 +130,46 @@ def spec() -> dict:
                                   "401": _err("Unauthorized")},
                 }
             },
+            "/v1/team": {
+                "get": {"operationId": "getTeam", "summary": "Your team (org), role, members",
+                        "responses": {"200": _json_resp("Team", "TeamEnvelope"),
+                                      "401": _err("Unauthorized")}},
+                "post": {"operationId": "createTeam", "summary": "Create a team (you become admin)",
+                         "requestBody": _json_body("CreateOrgInput"),
+                         "responses": {"201": _json_resp("Created", "TeamEnvelope"),
+                                       "400": _err("Invalid"), "401": _err("Unauthorized")}},
+            },
+            "/v1/team/members": {
+                "get": {"operationId": "listMembers", "summary": "List team members",
+                        "responses": {"200": _json_resp("Members", "MemberList"),
+                                      "401": _err("Unauthorized"), "404": _err("No team")}},
+                "post": {"operationId": "addMember", "summary": "Add a member by email (admin)",
+                         "requestBody": _json_body("AddMemberInput"),
+                         "responses": {"201": _json_resp("Added", "MemberEnvelope"),
+                                       "402": _err("Seat limit"), "403": _err("Admin only"),
+                                       "404": _err("No such user")}},
+            },
+            "/v1/team/members/{id}": {
+                "parameters": [{"name": "id", "in": "path", "required": True,
+                                "schema": {"type": "integer"}}],
+                "delete": {"operationId": "removeMember", "summary": "Remove a member (admin)",
+                           "responses": {"200": _json_resp("Removed", "DeleteResult"),
+                                         "403": _err("Admin only"), "404": _err("No team")}},
+            },
+            "/v1/team/style-guide": {
+                "get": {"operationId": "getStyleGuide", "summary": "The team style guide",
+                        "responses": {"200": _json_resp("Style guide", "StyleGuideEnvelope"),
+                                      "401": _err("Unauthorized"), "404": _err("No team")}},
+                "put": {"operationId": "setStyleGuide", "summary": "Replace the style guide (admin)",
+                        "requestBody": _json_body("StyleGuide"),
+                        "responses": {"200": _json_resp("Style guide", "StyleGuideEnvelope"),
+                                      "403": _err("Admin only"), "404": _err("No team")}},
+            },
+            "/v1/team/analytics": {
+                "get": {"operationId": "getTeamAnalytics", "summary": "Team rollup (admin)",
+                        "responses": {"200": _json_resp("Rollup", "RollupEnvelope"),
+                                      "403": _err("Admin only"), "404": _err("No team")}},
+            },
             "/v1/documents": {
                 "get": {
                     "operationId": "listDocuments",
@@ -410,6 +450,56 @@ def _schemas() -> dict:
                 "summary": _ref("AnalyticsSummary"),
                 "insights": {"type": "object"},
             },
+        },
+        "StyleGuide": {
+            "type": "object",
+            "description": "Team brand-voice rules.",
+            "properties": {
+                "tone": {"type": "string"},
+                "formality": {"type": "string"},
+                "banned_terms": {"type": "array", "items": {"type": "string"}},
+                "preferred_terms": {"type": "object", "additionalProperties": {"type": "string"}},
+                "formatting_rules": {"type": "string"},
+                "notes": {"type": "string"},
+            },
+        },
+        "StyleGuideEnvelope": {
+            "type": "object", "properties": {"style_guide": _ref("StyleGuide")},
+        },
+        "Org": {
+            "type": "object",
+            "properties": {
+                "id": {"type": "integer"}, "name": {"type": "string"},
+                "plan": {"type": "string"}, "seats": {"type": "integer"},
+                "seats_used": {"type": "integer"}, "role": {"type": ["string", "null"]},
+                "members": {"type": "array", "items": _ref("Member")},
+            },
+        },
+        "TeamEnvelope": {
+            "type": "object", "properties": {"org": {"anyOf": [_ref("Org"), {"type": "null"}]}},
+        },
+        "Member": {
+            "type": "object",
+            "properties": {"user_id": {"type": "integer"}, "email": {"type": "string"},
+                           "role": {"type": "string"}},
+        },
+        "MemberList": {
+            "type": "object", "properties": {"members": {"type": "array", "items": _ref("Member")}},
+        },
+        "MemberEnvelope": {
+            "type": "object", "properties": {"member": _ref("Member")},
+        },
+        "RollupEnvelope": {
+            "type": "object", "properties": {"rollup": {"type": "object"}},
+        },
+        "CreateOrgInput": {
+            "type": "object", "properties": {"name": {"type": "string"}}, "required": ["name"],
+        },
+        "AddMemberInput": {
+            "type": "object",
+            "properties": {"email": {"type": "string"},
+                           "role": {"type": "string", "enum": ["admin", "member"]}},
+            "required": ["email"],
         },
     }
 
