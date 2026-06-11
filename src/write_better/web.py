@@ -16,6 +16,7 @@ import json
 from .engine import Request, has_api_key, improve
 from .modes import MODES, resolve_services
 from .prompt import VALID_FORMATS
+from .samples import SAMPLES
 from .ui import PAGE
 
 _CORS = ("Access-Control-Allow-Origin", "*")
@@ -67,6 +68,7 @@ def _info() -> dict:
         },
         "services": [m.name for m in MODES],
         "formats": list(VALID_FORMATS),
+        "samples": SAMPLES,
     }
 
 

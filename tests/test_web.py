@@ -36,6 +36,9 @@ def test_get_returns_service_info():
     assert payload["service"] == "help-me-write-better"
     assert "tighten" in payload["services"]
     assert "markdown" in payload["formats"]
+    # samples are exposed so the UI can offer "Try a sample"
+    assert payload["samples"]["correct"].strip()
+    assert set(payload["samples"]) == set(payload["services"])
 
 
 def test_browser_get_returns_html_ui():
@@ -47,6 +50,7 @@ def test_browser_get_returns_html_ui():
     # tone and language are dropdowns, not free-text inputs
     assert b'<select id="tone">' in data
     assert b'<select id="language">' in data
+    assert b'id="sample"' in data  # "Try a sample" button
 
 
 def test_curl_get_still_returns_json():

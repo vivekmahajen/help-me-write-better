@@ -39,9 +39,12 @@ PAGE = """<!doctype html>
   .chip input { accent-color:var(--accent); }
   .opts { display:flex; align-items:center; gap:8px; margin-top:12px;
           color:var(--muted); font-size:13px; }
-  button { margin-top:16px; width:100%; padding:11px; border:0; border-radius:8px;
+  .actions { display:flex; gap:10px; margin-top:16px; }
+  button { flex:1; padding:11px; border:0; border-radius:8px;
            background:var(--accent); color:#0a0e1a; font-weight:600; font-size:15px;
            cursor:pointer; }
+  button.secondary { background:transparent; color:var(--accent);
+                     border:1px solid var(--line); font-weight:500; }
   button:disabled { opacity:.6; cursor:default; }
   .meta { color:var(--muted); font-size:12px; margin-bottom:8px; min-height:16px; }
   pre { white-space:pre-wrap; word-wrap:break-word; background:#0c0f1c;
@@ -117,7 +120,10 @@ PAGE = """<!doctype html>
         Include a summary of changes</label>
     </div>
 
-    <button id="go">Polish</button>
+    <div class="actions">
+      <button id="sample" class="secondary" type="button">Try a sample</button>
+      <button id="go">Polish</button>
+    </div>
   </section>
 
   <section class="panel">
@@ -131,18 +137,40 @@ PAGE = """<!doctype html>
 
 <script>
 const $ = (id) => document.getElementById(id);
+let SAMPLES = {};
+// Controls some samples want set so the demo is meaningful.
+const PRESETS = {
+  translate: { language: 'Spanish' },
+  retone: { tone: 'professional' },
+  convert: { format: 'email' },
+};
 
 async function init() {
   try {
     const info = await (await fetch('/', { headers: { Accept: 'application/json' } })).json();
+    SAMPLES = info.samples || {};
     $('services').innerHTML = info.services.map(s =>
-      `<label class="chip"><input type="checkbox" value="${s}"`
+      `<label class="chip"><input type="checkbox" name="svc" value="${s}"`
       + (s === 'clarify' ? ' checked' : '') + `>${s}</label>`).join('');
     $('format').innerHTML = info.formats.map(f =>
       `<option${f === 'markdown' ? ' selected' : ''}>${f}</option>`).join('');
   } catch (e) {
     $('meta').innerHTML = '<span class="err">Could not load options: ' + e + '</span>';
   }
+}
+
+function loadSample() {
+  const sel = chosenServices();
+  if (!sel.length) { $('meta').innerHTML = '<span class="err">Pick a service first.</span>'; return; }
+  const svc = sel[0];
+  const text = SAMPLES[svc];
+  if (!text) { $('meta').innerHTML = '<span class="err">No sample for ' + svc + '.</span>'; return; }
+  $('text').value = text;
+  const preset = PRESETS[svc] || {};
+  if (preset.language) $('language').value = preset.language;
+  if (preset.tone) $('tone').value = preset.tone;
+  if (preset.format) $('format').value = preset.format;
+  run();
 }
 
 function chosenServices() {
@@ -189,6 +217,7 @@ async function run() {
 }
 
 $('go').addEventListener('click', run);
+$('sample').addEventListener('click', loadSample);
 $('copy').addEventListener('click', () => navigator.clipboard.writeText($('out').textContent));
 init();
 </script>
