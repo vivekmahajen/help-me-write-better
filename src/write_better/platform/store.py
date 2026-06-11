@@ -98,6 +98,28 @@ CREATE TABLE IF NOT EXISTS oauth_identities (
     created_at INTEGER NOT NULL,
     UNIQUE(provider, subject)
 );
+
+-- Teams / organizations (#8). Seats are tied to the org's plan; the shared
+-- style guide is injected into the engine for every member.
+CREATE TABLE IF NOT EXISTS organizations (
+    id             INTEGER PRIMARY KEY AUTOINCREMENT,
+    name           TEXT NOT NULL,
+    owner_user_id  INTEGER NOT NULL REFERENCES users(id),
+    plan           TEXT NOT NULL DEFAULT 'business',
+    seats          INTEGER NOT NULL DEFAULT 5,
+    style_guide    TEXT NOT NULL DEFAULT '{}',
+    created_at     INTEGER NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS org_members (
+    id         INTEGER PRIMARY KEY AUTOINCREMENT,
+    org_id     INTEGER NOT NULL REFERENCES organizations(id),
+    user_id    INTEGER NOT NULL REFERENCES users(id),
+    role       TEXT NOT NULL DEFAULT 'member',   -- 'admin' | 'member'
+    created_at INTEGER NOT NULL,
+    UNIQUE(org_id, user_id)
+);
+CREATE INDEX IF NOT EXISTS ix_org_members_user ON org_members(user_id);
 """
 
 # Columns added after the initial release; applied as idempotent migrations.
@@ -455,6 +477,96 @@ class Store:
             "SELECT * FROM users WHERE stripe_customer_id = ?", (customer_id,)
         ).fetchone()
         return dict(row) if row else None
+
+    # --- organizations / teams ----------------------------------------------
+
+    def insert_org(self, name: str, owner_user_id: int, plan: str, seats: int) -> dict:
+        now = int(time.time())
+        with self._lock:
+            cur = self._conn.execute(
+                "INSERT INTO organizations(name, owner_user_id, plan, seats, created_at) "
+                "VALUES (?,?,?,?,?)",
+                (name, owner_user_id, plan, seats, now),
+            )
+            org_id = cur.lastrowid
+            self._conn.execute(
+                "INSERT INTO org_members(org_id, user_id, role, created_at) VALUES (?,?,?,?)",
+                (org_id, owner_user_id, "admin", now),
+            )
+            self._conn.commit()
+        return self.get_org(org_id)
+
+    def get_org(self, org_id: int) -> Optional[dict]:
+        return self._row("organizations", org_id)
+
+    def get_org_for_user(self, user_id: int) -> Optional[dict]:
+        """The org a user belongs to (first), with their role attached."""
+        row = self._conn.execute(
+            "SELECT o.*, m.role AS member_role FROM org_members m "
+            "JOIN organizations o ON o.id = m.org_id WHERE m.user_id = ? "
+            "ORDER BY o.id LIMIT 1",
+            (user_id,),
+        ).fetchone()
+        return dict(row) if row else None
+
+    def count_org_members(self, org_id: int) -> int:
+        return int(self._conn.execute(
+            "SELECT COUNT(*) AS n FROM org_members WHERE org_id = ?", (org_id,)
+        ).fetchone()["n"])
+
+    def get_org_member(self, org_id: int, user_id: int) -> Optional[dict]:
+        row = self._conn.execute(
+            "SELECT * FROM org_members WHERE org_id = ? AND user_id = ?",
+            (org_id, user_id),
+        ).fetchone()
+        return dict(row) if row else None
+
+    def add_org_member(self, org_id: int, user_id: int, role: str = "member") -> dict:
+        with self._lock:
+            self._conn.execute(
+                "INSERT INTO org_members(org_id, user_id, role, created_at) VALUES (?,?,?,?)",
+                (org_id, user_id, role, int(time.time())),
+            )
+            self._conn.commit()
+        return self.get_org_member(org_id, user_id)
+
+    def set_org_member_role(self, org_id: int, user_id: int, role: str) -> None:
+        with self._lock:
+            self._conn.execute(
+                "UPDATE org_members SET role = ? WHERE org_id = ? AND user_id = ?",
+                (role, org_id, user_id),
+            )
+            self._conn.commit()
+
+    def remove_org_member(self, org_id: int, user_id: int) -> None:
+        with self._lock:
+            self._conn.execute(
+                "DELETE FROM org_members WHERE org_id = ? AND user_id = ?",
+                (org_id, user_id),
+            )
+            self._conn.commit()
+
+    def list_org_members(self, org_id: int) -> list[dict]:
+        rows = self._conn.execute(
+            "SELECT m.user_id, m.role, u.email FROM org_members m "
+            "JOIN users u ON u.id = m.user_id WHERE m.org_id = ? ORDER BY m.id",
+            (org_id,),
+        ).fetchall()
+        return [dict(r) for r in rows]
+
+    def org_member_ids(self, org_id: int) -> list[int]:
+        rows = self._conn.execute(
+            "SELECT user_id FROM org_members WHERE org_id = ?", (org_id,)
+        ).fetchall()
+        return [r["user_id"] for r in rows]
+
+    def set_org_style_guide(self, org_id: int, style_guide_json: str) -> None:
+        with self._lock:
+            self._conn.execute(
+                "UPDATE organizations SET style_guide = ? WHERE id = ?",
+                (style_guide_json, org_id),
+            )
+            self._conn.commit()
 
     # --- internal ------------------------------------------------------------
 

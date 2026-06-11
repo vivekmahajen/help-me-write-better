@@ -80,6 +80,9 @@ _MIN_BODY = {
     "VersionInput": {"content": "c"},
     "RenameInput": {"title": "renamed"},
     "Preferences": {"k": "v"},
+    "CreateOrgInput": {"name": "Acme"},
+    "AddMemberInput": {"email": "nobody@example.com"},
+    "StyleGuide": {"tone": "warm"},
 }
 
 

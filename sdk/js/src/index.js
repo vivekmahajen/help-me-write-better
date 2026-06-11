@@ -59,6 +59,23 @@ export class WriteBetterClient {
     return this._request("PUT", "/v1/preferences", prefs).then((r) => r.preferences);
   }
 
+  // --- teams ---
+  getTeam() { return this._request("GET", "/v1/team").then((r) => r.org); }
+  createTeam(name) { return this._request("POST", "/v1/team", { name }).then((r) => r.org); }
+  listMembers() { return this._request("GET", "/v1/team/members").then((r) => r.members); }
+  addMember(email, role) {
+    return this._request("POST", "/v1/team/members", role ? { email, role } : { email })
+      .then((r) => r.member);
+  }
+  removeMember(userId) {
+    return this._request("DELETE", `/v1/team/members/${userId}`).then((r) => r.removed);
+  }
+  getStyleGuide() { return this._request("GET", "/v1/team/style-guide").then((r) => r.style_guide); }
+  setStyleGuide(guide) {
+    return this._request("PUT", "/v1/team/style-guide", guide).then((r) => r.style_guide);
+  }
+  getTeamAnalytics() { return this._request("GET", "/v1/team/analytics").then((r) => r.rollup); }
+
   // --- documents ---
   listDocuments() { return this._request("GET", "/v1/documents").then((r) => r.documents); }
   createDocument(content, title = "Untitled") {

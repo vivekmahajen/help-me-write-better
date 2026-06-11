@@ -43,7 +43,8 @@ layered around it.
 | Preferences sync | `platform/store.py` + gateway | `GET/PUT /v1/preferences` (JSON blob: default tone/audience/dialect). |
 | History | `platform/store.py` + gateway | `GET /v1/history` over the usage log — **metadata only, no document bodies**. |
 | Real-time check (#1) | `write_better/realtime.py` + `POST /v1/check` | Low-latency "as you type" path: local rules pass (spelling/grammar/punctuation/style/caps), changed-sentence diff, per-span cache. Normalized `{range, type, severity, message, replacements}` suggestions. **Uncapped, ~0 cost** (no model call); a `deep_check` hook can add a cheap-model pass later. |
-| Analytics (#9) | `platform/analytics.py` + `GET /v1/analytics` | Aggregates the usage log into **words written, services used, issues by type, activity by day, time-saved estimate**, and **week-over-week insights**. `rollup()` gives the team view (adoption + top issues) — wires into Teams (#8). Aggregate metrics only; **no document bodies**. |
+| Analytics (#9) | `platform/analytics.py` + `GET /v1/analytics` | Aggregates the usage log into **words written, services used, issues by type, activity by day, time-saved estimate**, and **week-over-week insights**. `rollup()` gives the team view (adoption + top issues). Aggregate metrics only; **no document bodies**. |
+| Teams + style guide (#8) | `platform/teams.py` + `/v1/team*` | Orgs with members/roles (admin/member); **seats tied to the plan** (Business = 5). A shared **style guide** (tone, banned/preferred terms, formatting) is injected into `/v1/improve` (brand-voice) and enforced on `/v1/check` (banned terms) for every member. Admin-only edits; `GET /v1/team/analytics` = the team rollup. |
 | Versioned gateway | `platform/gateway.py` | WSGI app: `GET /v1`, `/v1/account`, `/v1/usage`, `/v1/history`, `/v1/preferences`, `/v1/documents…`, `POST /v1/improve`, `POST /v1/check` (API-key auth). |
 | OpenAPI contract | `platform/openapi.py` | OpenAPI 3.1 spec served at `GET /v1/openapi.json`; dependency-free docs viewer at `GET /v1/docs`. Single source of truth, cross-checked against live routes in tests. |
 | JS/TS SDK | `sdk/js/` | `@help-me-write-better/sdk` — ESM JS + TypeScript declarations, zero deps, Node 18+. Typed methods for every endpoint. |
@@ -81,10 +82,10 @@ Per the build order, **not** in this slice:
   (`addins/word/`, Office.js task pane) and **Google Docs add-on**
   (`addins/google-docs/`, Apps Script Workspace Add-on — the right surface for
   Docs' canvas) (#3). All are thin clients of the gateway.
-- **Phase 4 in progress:** **analytics (#9)** is done — the data layer
-  (`GET /v1/analytics`, weekly insights, team `rollup`); a visual dashboard is a
-  thin client of that endpoint (follow-up). Next: **teams + shared style guide
-  (#8)**, then **desktop + mobile/keyboard (#4)**.
+- **Phase 4 in progress:** **analytics (#9)** and **teams + shared style guide
+  (#8)** are done (see the table). Remaining: **desktop + mobile/keyboard (#4)** —
+  client surfaces (Electron/Tauri desktop, mobile apps + custom keyboard). Visual
+  dashboards for analytics/teams are thin clients of the existing endpoints.
 - **Phase 2:** the low-latency real-time check path (#1), then the browser
   extension (#2).
 - **Phase 3:** Word + Docs add-ins (#3).
