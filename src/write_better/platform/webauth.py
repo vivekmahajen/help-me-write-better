@@ -138,11 +138,19 @@ def _logout(store, environ, start_response, secure):
                  extra=[_set_cookie(SESSION_COOKIE, "", secure=secure, max_age=0)])
 
 
-def _current_user(store, environ):
+def current_user(store, environ):
+    """The signed-in user for this request (from the session cookie), or None.
+
+    Public helper reused by other surfaces (e.g. billing) that authenticate via
+    the same session cookie.
+    """
     jar = _cookies(environ)
     if SESSION_COOKIE not in jar:
         return None
     return accounts.authenticate_session(store, jar[SESSION_COOKIE].value)
+
+
+_current_user = current_user  # backwards-compatible alias
 
 
 def _me(store, environ, start_response):
