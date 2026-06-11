@@ -1,0 +1,20 @@
+{
+  "name": "@help-me-write-better/sdk",
+  "version": "1.0.0",
+  "description": "JS/TS client for the help-me-write-better API",
+  "type": "module",
+  "main": "./src/index.js",
+  "types": "./src/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./src/index.d.ts",
+      "import": "./src/index.js"
+    }
+  },
+  "files": ["src"],
+  "scripts": {
+    "test": "node --test"
+  },
+  "engines": { "node": ">=18" },
+  "license": "MIT"
+}
