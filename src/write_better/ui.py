@@ -81,10 +81,34 @@ PAGE = """<!doctype html>
     </div>
 
     <div class="row">
-      <div><label for="tone">Tone (optional)</label>
-        <input id="tone" type="text" placeholder="e.g. friendly"></div>
-      <div><label for="language">Language (optional)</label>
-        <input id="language" type="text" placeholder="e.g. Spanish"></div>
+      <div>
+        <label for="tone">Tone (optional)</label>
+        <select id="tone">
+          <option value="">— none —</option>
+          <option>friendly</option><option>professional</option>
+          <option>formal</option><option>casual</option>
+          <option>confident</option><option>persuasive</option>
+          <option>academic</option><option>enthusiastic</option>
+          <option>empathetic</option><option>authoritative</option>
+          <option>playful</option><option>neutral</option>
+          <option>urgent</option>
+        </select>
+      </div>
+      <div>
+        <label for="language">Language (optional)</label>
+        <select id="language">
+          <option value="">— none —</option>
+          <option>English</option><option>Spanish</option>
+          <option>French</option><option>German</option>
+          <option>Italian</option><option>Portuguese</option>
+          <option>Dutch</option><option>Polish</option>
+          <option>Russian</option><option>Arabic</option>
+          <option>Hindi</option><option>Chinese (Simplified)</option>
+          <option>Chinese (Traditional)</option><option>Japanese</option>
+          <option>Korean</option><option>Vietnamese</option>
+          <option>Turkish</option><option>Indonesian</option>
+        </select>
+      </div>
     </div>
 
     <div class="opts">
