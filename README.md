@@ -121,11 +121,17 @@ print(result.text, "->", result.model)
 
 ## Deploy (Vercel)
 
-The suite ships an HTTP API so it runs on Vercel's native Python runtime:
+The suite ships an HTTP API + a browser UI so it runs on Vercel's native Python
+runtime:
 
 - `app.py` — the top-level Vercel entrypoint (serves the WSGI `app`).
-- `src/write_better/web.py` — the actual app: `GET` returns service info, `POST`
-  runs the engine on a JSON body.
+- `src/write_better/web.py` — the app. `GET` content-negotiates: browsers
+  (`Accept: text/html`) get a single-page UI; everyone else gets JSON service
+  info. `POST` runs the engine on a JSON body.
+- `src/write_better/ui.py` — the self-contained HTML page (no external assets);
+  it calls the same `POST` endpoint.
+
+Open the deployed URL in a browser for the UI; `curl` it for the JSON API.
 
 The operator prompt travels with the package (it's package data), so no extra
 file-bundling config is needed.

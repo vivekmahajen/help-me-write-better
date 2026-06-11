@@ -16,8 +16,19 @@ import json
 from .engine import Request, has_api_key, improve
 from .modes import MODES, resolve_services
 from .prompt import VALID_FORMATS
+from .ui import PAGE
 
 _CORS = ("Access-Control-Allow-Origin", "*")
+
+
+def _html(start_response, status: str, html: str):
+    body = html.encode("utf-8")
+    start_response(status, [
+        ("Content-Type", "text/html; charset=utf-8"),
+        ("Content-Length", str(len(body))),
+        _CORS,
+    ])
+    return [body]
 
 
 def _respond(start_response, status: str, payload: dict, extra_headers=()):
@@ -72,6 +83,9 @@ def app(environ, start_response):
         return [b""]
 
     if method == "GET":
+        # Browsers (Accept: text/html) get the UI; everyone else gets JSON.
+        if "text/html" in environ.get("HTTP_ACCEPT", ""):
+            return _html(start_response, "200 OK", PAGE)
         return _respond(start_response, "200 OK", _info())
 
     if method != "POST":

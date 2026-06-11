@@ -16,8 +16,10 @@ class _Capture:
         self.headers = headers
 
 
-def _call(method="GET", body=None):
+def _call(method="GET", body=None, accept=None):
     environ = {"REQUEST_METHOD": method}
+    if accept is not None:
+        environ["HTTP_ACCEPT"] = accept
     if body is not None:
         raw = body if isinstance(body, (bytes, bytearray)) else json.dumps(body).encode()
         environ["CONTENT_LENGTH"] = str(len(raw))
@@ -34,6 +36,21 @@ def test_get_returns_service_info():
     assert payload["service"] == "help-me-write-better"
     assert "tighten" in payload["services"]
     assert "markdown" in payload["formats"]
+
+
+def test_browser_get_returns_html_ui():
+    cap, data = _call("GET", accept="text/html,application/xhtml+xml")
+    assert cap.status == "200 OK"
+    content_type = dict(cap.headers)["Content-Type"]
+    assert "text/html" in content_type
+    assert b"<title>Help Me Write Better</title>" in data
+
+
+def test_curl_get_still_returns_json():
+    # No HTML in Accept -> JSON info, not the page.
+    cap, data = _call("GET", accept="*/*")
+    assert "application/json" in dict(cap.headers)["Content-Type"]
+    assert json.loads(data)["service"] == "help-me-write-better"
 
 
 def test_options_preflight_has_cors():
