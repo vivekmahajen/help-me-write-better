@@ -35,6 +35,8 @@ layered around it.
 |---|---|---|
 | Storage | `platform/store.py` | SQLite (stdlib). Tables: `users`, `api_keys`, `usage_events`. Never stores document bodies. |
 | Accounts + API keys | `platform/accounts.py` | PBKDF2 password hashing; API keys stored as SHA-256 hash, shown once. |
+| Web sessions + login | `platform/webauth.py` | Cookie sessions; `POST /auth/signup\|login\|logout`, `GET /auth/me`. End-user surfaces auth here; programmatic uses API keys. |
+| OAuth (Google/Microsoft) | `platform/oauth.py` + webauth | Real OIDC authorization-code flow (injectable transport); `GET /auth/oauth/{provider}/start\|callback`. State-cookie CSRF check; links to existing email or creates a passwordless user. |
 | Metering + caps | `platform/metering.py` | Premium-model generations metered per `plans.py` monthly cap; routine/standard uncapped. Enforced **before** spending on the engine. |
 | Billing | `platform/billing.py` | `BillingProvider` interface. `LocalBillingProvider` works with no keys; `StripeBillingProvider` is a clear stub (documents the calls, raises until wired). |
 | Saved docs + versions | `platform/store.py` + gateway | `POST/GET /v1/documents`, `GET/PATCH/DELETE /v1/documents/{id}`, `GET/POST /v1/documents/{id}/versions`. Bodies stored **only** on explicit save; strict per-user ownership. |
@@ -67,10 +69,10 @@ that would exceed the plan's premium cap is rejected with **402** (`cap_reached`
 
 Per the build order, **not** in this slice:
 
-- **Phase 1 remainder:** OAuth (Google/Microsoft) + web session login; real Stripe
-  wiring (Checkout, portal, `invoice.paid`/`payment_failed` webhooks). *(Saved
-  documents, versions, preferences, history, the OpenAPI spec, and the JS/TS SDK
-  are done — see the table above.)*
+- **Phase 1 remainder:** real Stripe wiring (Checkout, customer portal,
+  `invoice.paid`/`payment_failed` webhooks) — `StripeBillingProvider` is still a
+  stub. *(Web login + OAuth, saved documents, versions, preferences, history, the
+  OpenAPI spec, and the JS/TS SDK are done — see the table above.)*
 - **Phase 2:** the low-latency real-time check path (#1), then the browser
   extension (#2).
 - **Phase 3:** Word + Docs add-ins (#3).
