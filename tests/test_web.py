@@ -44,6 +44,9 @@ def test_browser_get_returns_html_ui():
     content_type = dict(cap.headers)["Content-Type"]
     assert "text/html" in content_type
     assert b"<title>Help Me Write Better</title>" in data
+    # tone and language are dropdowns, not free-text inputs
+    assert b'<select id="tone">' in data
+    assert b'<select id="language">' in data
 
 
 def test_curl_get_still_returns_json():
