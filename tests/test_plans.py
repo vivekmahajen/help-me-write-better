@@ -59,6 +59,15 @@ def test_routine_and_standard_requests_consume_no_metered_cap():
     assert plans.cap_consumed_by(resolve_services("translate,structure")) is None
 
 
+def test_extended_services_link_to_caps_by_tier():
+    # premium extended services draw down the premium-generation cap
+    assert plans.cap_consumed_by(resolve_services("template")) == "premium_generations"
+    assert plans.cap_consumed_by(resolve_services("humanize")) == "premium_generations"
+    # standard/routine extended services do not
+    assert plans.cap_consumed_by(resolve_services("tone-detect")) is None
+    assert plans.cap_consumed_by(resolve_services("fluency")) is None
+
+
 def test_editing_unit_cost_changes_margin():
     cheap_images = plans.UnitCosts(ai_image=0.005)
     pro = plans.PLANS_BY_NAME["pro"]

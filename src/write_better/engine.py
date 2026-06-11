@@ -90,6 +90,9 @@ def _build_call_kwargs(req: Request, modes: list[Mode], model: str) -> dict:
                     reading_level=req.reading_level,
                     language=req.language,
                     free_form=req.free_form,
+                    service_instructions=[
+                        (m.name, m.instruction) for m in modes if m.instruction
+                    ],
                 ),
             }
         ],

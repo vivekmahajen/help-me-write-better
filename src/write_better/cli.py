@@ -74,15 +74,20 @@ def _build_parser() -> argparse.ArgumentParser:
 
 
 def _print_services() -> None:
-    print("Available services (letter / name — tier):\n")
     tier_model = {
         "routine": ROUTINE_MODEL,
         "standard": STANDARD_MODEL,
         "premium": PREMIUM_MODEL,
     }
+    print("Core services (letter / name — tier):\n")
+    printed_extended_header = False
     for m in MODES:
+        if not m.letter and not printed_extended_header:
+            print("\nExtended services (name — tier):\n")
+            printed_extended_header = True
+        marker = m.letter or "·"
         aliases = f"  [aliases: {', '.join(m.aliases)}]" if m.aliases else ""
-        print(f"  {m.letter}  {m.name:<11} {m.tier:<8} ({tier_model[m.tier]})")
+        print(f"  {marker}  {m.name:<17} {m.tier:<8} ({tier_model[m.tier]})")
         print(f"       {m.summary}{aliases}")
 
 

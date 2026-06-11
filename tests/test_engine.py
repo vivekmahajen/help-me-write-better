@@ -86,6 +86,29 @@ def test_user_message_contains_inputs_contract():
     assert "hello world" in content
 
 
+def test_extended_service_instruction_is_injected():
+    recorder: dict = {}
+    req = Request(text="some words", services=["tone-detect"])
+    improve(req, client=_FakeClient(recorder))
+    content = recorder["kwargs"]["messages"][0]["content"]
+    assert "SERVICE INSTRUCTIONS" in content
+    assert "Analyze the TONE" in content
+    assert "--- tone-detect ---" in content
+
+
+def test_core_service_injects_no_instruction_block():
+    recorder: dict = {}
+    improve(Request(text="x", services=["tighten"]), client=_FakeClient(recorder))
+    content = recorder["kwargs"]["messages"][0]["content"]
+    assert "SERVICE INSTRUCTIONS" not in content
+
+
+def test_extended_service_routing():
+    assert route_model(resolve_services("tone-detect")) == STANDARD_MODEL
+    assert route_model(resolve_services("template")) == PREMIUM_MODEL
+    assert route_model(resolve_services("fluency")) == ROUTINE_MODEL
+
+
 def test_explicit_model_override_wins():
     recorder: dict = {}
     req = Request(text="x", services=["correct"], model="claude-opus-4-8")
