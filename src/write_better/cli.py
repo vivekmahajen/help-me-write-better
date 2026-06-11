@@ -65,6 +65,8 @@ def _build_parser() -> argparse.ArgumentParser:
                        help="disable streaming output")
 
     p.add_argument("--list", action="store_true", help="list available services and exit")
+    p.add_argument("--pricing", action="store_true",
+                   help="print the plan pricing & margin table and exit")
     p.add_argument("--dry-run", action="store_true",
                    help="show the routed model without calling the API")
     p.add_argument("--version", action="version", version=f"%(prog)s {__version__}")
@@ -98,6 +100,13 @@ def main(argv: list[str] | None = None) -> int:
 
     if args.list:
         _print_services()
+        return 0
+
+    if args.pricing:
+        from .plans import margin_table
+
+        print(margin_table())
+        print("\nFull rationale: docs/PRICING.md")
         return 0
 
     try:

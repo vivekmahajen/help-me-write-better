@@ -86,6 +86,9 @@ echo "x" | write-better -s correct,paraphrase --dry-run
 
 # List all services
 write-better --list
+
+# Print the plan pricing & margin table
+write-better --pricing
 ```
 
 Run `write-better --help` for the full flag set (targets: `--audience`, `--tone`,
@@ -111,6 +114,10 @@ print(result.text, "->", result.model)
   per-request `INPUTS` block.
 - `src/write_better/engine.py` — model routing + the Claude call (streaming).
 - `src/write_better/cli.py` — the command-line interface.
+- `src/write_better/plans.py` — the pricing & margin model (tiers, caps, unit
+  costs); the live form of the pricing spreadsheet. Edit the unit costs and every
+  margin recalculates.
+- `docs/PRICING.md` — recommended end-user pricing and the margin rationale.
 
 ## Develop
 
