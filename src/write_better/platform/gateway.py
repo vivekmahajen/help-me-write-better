@@ -88,6 +88,11 @@ def make_gateway(store: Store, engine=engine_improve):
                 "endpoints": {
                     "GET /v1/account": "your account + plan",
                     "GET /v1/usage": "current-period quota + usage",
+                    "GET /v1/history": "recent requests (metadata only)",
+                    "GET|PUT /v1/preferences": "synced user preferences",
+                    "GET|POST /v1/documents": "list / create saved documents",
+                    "GET|PATCH|DELETE /v1/documents/{id}": "fetch / rename / delete a document",
+                    "GET|POST /v1/documents/{id}/versions": "list / add a version",
                     "POST /v1/improve": "run the engine (metered, capped)",
                 },
             })
@@ -98,22 +103,117 @@ def make_gateway(store: Store, engine=engine_improve):
             return _json(start_response, "401 Unauthorized",
                          {"error": "missing or invalid API key", "code": "unauthorized"})
 
-        if path == "/v1/account" and method == "GET":
+        parts = [p for p in path.split("/") if p]  # e.g. ['v1','documents','5','versions']
+        rest = parts[1:]
+
+        if rest == ["account"] and method == "GET":
             return _json(start_response, "200 OK",
                          {"email": user["email"], "plan": user["plan"]})
 
-        if path == "/v1/usage" and method == "GET":
+        if rest == ["usage"] and method == "GET":
             return _json(start_response, "200 OK", {
                 "quota": metering.quota(store, user),
                 "summary": store.usage_since(user["id"], metering.period_start()),
             })
 
-        if path == "/v1/improve" and method == "POST":
+        if rest == ["history"] and method == "GET":
+            return _json(start_response, "200 OK",
+                         {"history": store.history(user["id"])})
+
+        if rest == ["preferences"]:
+            return _preferences(store, user, method, environ, start_response)
+
+        if rest and rest[0] == "documents":
+            return _documents(store, user, rest, method, environ, start_response)
+
+        if rest == ["improve"] and method == "POST":
             return _improve(store, engine, user, environ, start_response)
 
         return _json(start_response, "404 Not Found", {"error": "no such endpoint"})
 
     return app
+
+
+def _preferences(store, user, method, environ, start_response):
+    if method == "GET":
+        return _json(start_response, "200 OK",
+                     {"preferences": store.get_preferences(user["id"])})
+    if method in ("PUT", "POST"):
+        data, err = _read_json(environ)
+        if err:
+            return _json(start_response, "400 Bad Request", {"error": err})
+        return _json(start_response, "200 OK",
+                     {"preferences": store.set_preferences(user["id"], data)})
+    return _json(start_response, "405 Method Not Allowed", {"error": "use GET or PUT"})
+
+
+def _documents(store, user, rest, method, environ, start_response):
+    uid = user["id"]
+
+    # /v1/documents  -> list / create
+    if rest == ["documents"]:
+        if method == "GET":
+            return _json(start_response, "200 OK", {"documents": store.list_documents(uid)})
+        if method == "POST":
+            data, err = _read_json(environ)
+            if err:
+                return _json(start_response, "400 Bad Request", {"error": err})
+            content = data.get("content")
+            if not isinstance(content, str):
+                return _json(start_response, "400 Bad Request",
+                             {"error": "'content' (string) is required to save a document"})
+            doc = store.create_document(uid, data.get("title") or "Untitled", content)
+            return _json(start_response, "201 Created", {"document": doc})
+        return _json(start_response, "405 Method Not Allowed", {"error": "use GET or POST"})
+
+    # everything below needs a numeric document id
+    try:
+        doc_id = int(rest[1])
+    except (IndexError, ValueError):
+        return _json(start_response, "404 Not Found", {"error": "invalid document id"})
+
+    # /v1/documents/{id}/versions -> list / add
+    if rest[2:] == ["versions"]:
+        if method == "GET":
+            versions = store.list_document_versions(uid, doc_id)
+            if versions is None:
+                return _json(start_response, "404 Not Found", {"error": "no such document"})
+            return _json(start_response, "200 OK", {"versions": versions})
+        if method == "POST":
+            data, err = _read_json(environ)
+            if err:
+                return _json(start_response, "400 Bad Request", {"error": err})
+            content = data.get("content")
+            if not isinstance(content, str):
+                return _json(start_response, "400 Bad Request",
+                             {"error": "'content' (string) is required"})
+            doc = store.add_document_version(uid, doc_id, content)
+            if doc is None:
+                return _json(start_response, "404 Not Found", {"error": "no such document"})
+            return _json(start_response, "201 Created", {"document": doc})
+        return _json(start_response, "405 Method Not Allowed", {"error": "use GET or POST"})
+
+    # /v1/documents/{id} -> get / rename / delete
+    if rest[2:] == []:
+        if method == "GET":
+            doc = store.get_document(uid, doc_id)
+            if doc is None:
+                return _json(start_response, "404 Not Found", {"error": "no such document"})
+            return _json(start_response, "200 OK", {"document": doc})
+        if method in ("PATCH", "POST"):
+            data, err = _read_json(environ)
+            if err:
+                return _json(start_response, "400 Bad Request", {"error": err})
+            doc = store.rename_document(uid, doc_id, data.get("title") or "Untitled")
+            if doc is None:
+                return _json(start_response, "404 Not Found", {"error": "no such document"})
+            return _json(start_response, "200 OK", {"document": doc})
+        if method == "DELETE":
+            ok = store.delete_document(uid, doc_id)
+            status = "200 OK" if ok else "404 Not Found"
+            return _json(start_response, status, {"deleted": ok})
+
+    return _json(start_response, "404 Not Found", {"error": "no such endpoint"})
 
 
 def _improve(store, engine, user, environ, start_response):
