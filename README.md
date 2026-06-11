@@ -121,12 +121,14 @@ print(result.text, "->", result.model)
 
 ## Deploy (Vercel)
 
-The suite ships an HTTP API so it runs as a serverless function on Vercel:
+The suite ships an HTTP API so it runs on Vercel's native Python runtime:
 
-- `api/index.py` — the Vercel entrypoint (serves the WSGI `app`).
+- `app.py` — the top-level Vercel entrypoint (serves the WSGI `app`).
 - `src/write_better/web.py` — the actual app: `GET` returns service info, `POST`
   runs the engine on a JSON body.
-- `vercel.json` — bundles `src/` into the function and routes all paths to it.
+
+The operator prompt travels with the package (it's package data), so no extra
+file-bundling config is needed.
 
 ```bash
 vercel deploy
