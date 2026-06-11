@@ -1,0 +1,26 @@
+{
+  "timeZone": "Etc/UTC",
+  "exceptionLogging": "STACKDRIVER",
+  "runtimeVersion": "V8",
+  "oauthScopes": [
+    "https://www.googleapis.com/auth/documents.currentonly",
+    "https://www.googleapis.com/auth/script.external_request",
+    "https://www.googleapis.com/auth/script.locale"
+  ],
+  "addOns": {
+    "common": {
+      "name": "Help Me Write Better",
+      "logoUrl": "https://help-me-write-better.example/assets/icon.png",
+      "homepageTrigger": {
+        "runFunction": "onHomepage",
+        "enabled": true
+      }
+    },
+    "docs": {
+      "homepageTrigger": {
+        "runFunction": "onHomepage",
+        "enabled": true
+      }
+    }
+  }
+}

@@ -75,10 +75,13 @@ Per the build order, **not** in this slice:
   Stripe billing are all done (see the table above). The web UI is still the
   unauthenticated demo — routing it through the gateway with login is a small
   follow-up.
-- **Phase 2 in progress:** the real-time check path (#1) and the **browser
-  extension (#2)** are done (extension lives in `extension/` — a Manifest V3 thin
-  client of `POST /v1/check` for Gmail + web fields). Next: the **Word + Google
-  Docs add-ins (#3)** — Docs needs the add-on path since it renders to canvas.
+- **Phases 2–3 surfaces shipped:** real-time check path (#1); **browser
+  extension (#2)** (`extension/`, MV3, Gmail + web fields); **Word add-in**
+  (`addins/word/`, Office.js task pane) and **Google Docs add-on**
+  (`addins/google-docs/`, Apps Script Workspace Add-on — the right surface for
+  Docs' canvas) (#3). All are thin clients of the gateway.
+- **Next: Phase 4** — analytics dashboards (#9), teams + shared style guide (#8),
+  then desktop + mobile/keyboard (#4).
 - **Phase 2:** the low-latency real-time check path (#1), then the browser
   extension (#2).
 - **Phase 3:** Word + Docs add-ins (#3).
