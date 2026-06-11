@@ -37,7 +37,10 @@ layered around it.
 | Accounts + API keys | `platform/accounts.py` | PBKDF2 password hashing; API keys stored as SHA-256 hash, shown once. |
 | Metering + caps | `platform/metering.py` | Premium-model generations metered per `plans.py` monthly cap; routine/standard uncapped. Enforced **before** spending on the engine. |
 | Billing | `platform/billing.py` | `BillingProvider` interface. `LocalBillingProvider` works with no keys; `StripeBillingProvider` is a clear stub (documents the calls, raises until wired). |
-| Versioned gateway | `platform/gateway.py` | WSGI app: `GET /v1`, `GET /v1/account`, `GET /v1/usage`, `POST /v1/improve` (API-key auth). |
+| Saved docs + versions | `platform/store.py` + gateway | `POST/GET /v1/documents`, `GET/PATCH/DELETE /v1/documents/{id}`, `GET/POST /v1/documents/{id}/versions`. Bodies stored **only** on explicit save; strict per-user ownership. |
+| Preferences sync | `platform/store.py` + gateway | `GET/PUT /v1/preferences` (JSON blob: default tone/audience/dialect). |
+| History | `platform/store.py` + gateway | `GET /v1/history` over the usage log — **metadata only, no document bodies**. |
+| Versioned gateway | `platform/gateway.py` | WSGI app: `GET /v1`, `/v1/account`, `/v1/usage`, `/v1/history`, `/v1/preferences`, `/v1/documents…`, `POST /v1/improve` (API-key auth). |
 | Composed app | `platform/wsgi.py` | `/v1/*` → gateway, else the existing demo app. |
 | Admin CLI | `platform/admin.py` | `write-better-admin create-user|create-key|set-plan|usage`. |
 
@@ -63,8 +66,9 @@ that would exceed the plan's premium cap is rejected with **402** (`cap_reached`
 Per the build order, **not** in this slice:
 
 - **Phase 1 remainder:** OAuth (Google/Microsoft) + web session login; real Stripe
-  wiring (Checkout, portal, `invoice.paid`/`payment_failed` webhooks); saved
-  documents + history; OpenAPI spec + JS/TS SDK.
+  wiring (Checkout, portal, `invoice.paid`/`payment_failed` webhooks); OpenAPI
+  spec + JS/TS SDK. *(Saved documents, versions, preferences, and history are
+  done — see the table above.)*
 - **Phase 2:** the low-latency real-time check path (#1), then the browser
   extension (#2).
 - **Phase 3:** Word + Docs add-ins (#3).

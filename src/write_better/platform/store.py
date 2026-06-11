@@ -12,6 +12,7 @@ swapped without touching callers.
 
 from __future__ import annotations
 
+import json
 import sqlite3
 import threading
 import time
@@ -48,6 +49,32 @@ CREATE TABLE IF NOT EXISTS usage_events (
     output_tokens INTEGER NOT NULL DEFAULT 0
 );
 CREATE INDEX IF NOT EXISTS ix_usage_user_ts ON usage_events(user_id, ts);
+
+-- Saved documents. Bodies live ONLY here, and ONLY when a user explicitly saves
+-- (default behaviour stores no document text — see metering/history).
+CREATE TABLE IF NOT EXISTS documents (
+    id         INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id    INTEGER NOT NULL REFERENCES users(id),
+    title      TEXT NOT NULL DEFAULT 'Untitled',
+    created_at INTEGER NOT NULL,
+    updated_at INTEGER NOT NULL
+);
+CREATE INDEX IF NOT EXISTS ix_documents_user ON documents(user_id);
+
+CREATE TABLE IF NOT EXISTS document_versions (
+    id          INTEGER PRIMARY KEY AUTOINCREMENT,
+    document_id INTEGER NOT NULL REFERENCES documents(id),
+    user_id     INTEGER NOT NULL REFERENCES users(id),
+    content     TEXT NOT NULL,
+    created_at  INTEGER NOT NULL
+);
+CREATE INDEX IF NOT EXISTS ix_versions_doc ON document_versions(document_id);
+
+-- Synced per-user preferences (default tone/audience/dialect, etc.) as a JSON blob.
+CREATE TABLE IF NOT EXISTS preferences (
+    user_id INTEGER PRIMARY KEY REFERENCES users(id),
+    data    TEXT NOT NULL DEFAULT '{}'
+);
 """
 
 
@@ -163,6 +190,146 @@ class Store:
             (user_id, since_ts),
         ).fetchone()
         return dict(row)
+
+    def history(self, user_id: int, limit: int = 50) -> list[dict]:
+        """Recent per-request history (metadata only — no document bodies)."""
+        rows = self._conn.execute(
+            "SELECT id, ts, services, model, premium, input_tokens, output_tokens "
+            "FROM usage_events WHERE user_id = ? ORDER BY id DESC LIMIT ?",
+            (user_id, max(1, min(limit, 500))),
+        ).fetchall()
+        return [dict(r) for r in rows]
+
+    # --- documents -----------------------------------------------------------
+
+    def _owns_document(self, user_id: int, document_id: int) -> bool:
+        row = self._conn.execute(
+            "SELECT 1 FROM documents WHERE id = ? AND user_id = ?",
+            (document_id, user_id),
+        ).fetchone()
+        return row is not None
+
+    def create_document(self, user_id: int, title: str, content: str) -> dict:
+        now = int(time.time())
+        with self._lock:
+            cur = self._conn.execute(
+                "INSERT INTO documents(user_id, title, created_at, updated_at) "
+                "VALUES (?,?,?,?)",
+                (user_id, title or "Untitled", now, now),
+            )
+            doc_id = cur.lastrowid
+            self._conn.execute(
+                "INSERT INTO document_versions(document_id, user_id, content, created_at) "
+                "VALUES (?,?,?,?)",
+                (doc_id, user_id, content, now),
+            )
+            self._conn.commit()
+        return self.get_document(user_id, doc_id)
+
+    def add_document_version(self, user_id: int, document_id: int,
+                             content: str) -> Optional[dict]:
+        if not self._owns_document(user_id, document_id):
+            return None
+        now = int(time.time())
+        with self._lock:
+            self._conn.execute(
+                "INSERT INTO document_versions(document_id, user_id, content, created_at) "
+                "VALUES (?,?,?,?)",
+                (document_id, user_id, content, now),
+            )
+            self._conn.execute(
+                "UPDATE documents SET updated_at = ? WHERE id = ?", (now, document_id)
+            )
+            self._conn.commit()
+        return self.get_document(user_id, document_id)
+
+    def rename_document(self, user_id: int, document_id: int, title: str) -> Optional[dict]:
+        if not self._owns_document(user_id, document_id):
+            return None
+        with self._lock:
+            self._conn.execute(
+                "UPDATE documents SET title = ?, updated_at = ? WHERE id = ?",
+                (title or "Untitled", int(time.time()), document_id),
+            )
+            self._conn.commit()
+        return self.get_document(user_id, document_id)
+
+    def delete_document(self, user_id: int, document_id: int) -> bool:
+        if not self._owns_document(user_id, document_id):
+            return False
+        with self._lock:
+            self._conn.execute(
+                "DELETE FROM document_versions WHERE document_id = ?", (document_id,)
+            )
+            self._conn.execute("DELETE FROM documents WHERE id = ?", (document_id,))
+            self._conn.commit()
+        return True
+
+    def list_documents(self, user_id: int) -> list[dict]:
+        rows = self._conn.execute(
+            "SELECT d.id, d.title, d.created_at, d.updated_at, "
+            "       COUNT(v.id) AS versions "
+            "FROM documents d LEFT JOIN document_versions v ON v.document_id = d.id "
+            "WHERE d.user_id = ? GROUP BY d.id ORDER BY d.updated_at DESC",
+            (user_id,),
+        ).fetchall()
+        return [dict(r) for r in rows]
+
+    def get_document(self, user_id: int, document_id: int) -> Optional[dict]:
+        doc = self._conn.execute(
+            "SELECT * FROM documents WHERE id = ? AND user_id = ?",
+            (document_id, user_id),
+        ).fetchone()
+        if not doc:
+            return None
+        latest = self._conn.execute(
+            "SELECT id, content, created_at FROM document_versions "
+            "WHERE document_id = ? ORDER BY id DESC LIMIT 1",
+            (document_id,),
+        ).fetchone()
+        count = self._conn.execute(
+            "SELECT COUNT(*) AS n FROM document_versions WHERE document_id = ?",
+            (document_id,),
+        ).fetchone()["n"]
+        result = dict(doc)
+        result["content"] = latest["content"] if latest else ""
+        result["latest_version_id"] = latest["id"] if latest else None
+        result["versions"] = int(count)
+        return result
+
+    def list_document_versions(self, user_id: int, document_id: int) -> Optional[list[dict]]:
+        if not self._owns_document(user_id, document_id):
+            return None
+        rows = self._conn.execute(
+            "SELECT id, content, created_at FROM document_versions "
+            "WHERE document_id = ? ORDER BY id DESC",
+            (document_id,),
+        ).fetchall()
+        return [dict(r) for r in rows]
+
+    # --- preferences ---------------------------------------------------------
+
+    def get_preferences(self, user_id: int) -> dict:
+        row = self._conn.execute(
+            "SELECT data FROM preferences WHERE user_id = ?", (user_id,)
+        ).fetchone()
+        if not row:
+            return {}
+        try:
+            return json.loads(row["data"])
+        except (ValueError, TypeError):
+            return {}
+
+    def set_preferences(self, user_id: int, data: dict) -> dict:
+        blob = json.dumps(data)
+        with self._lock:
+            self._conn.execute(
+                "INSERT INTO preferences(user_id, data) VALUES (?,?) "
+                "ON CONFLICT(user_id) DO UPDATE SET data = excluded.data",
+                (user_id, blob),
+            )
+            self._conn.commit()
+        return data
 
     # --- internal ------------------------------------------------------------
 
