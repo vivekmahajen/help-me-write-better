@@ -23,8 +23,8 @@ write-better = "write_better.cli:main"
 where = ["src"]
 
 [tool.setuptools.package-data]
-# Ship the operator prompt alongside the package.
-"*" = ["prompts/operator_prompt.md"]
+# Ship the operator prompt as package data.
+"write_better" = ["operator_prompt.md"]
 
 [tool.pytest.ini_options]
 pythonpath = ["src"]
