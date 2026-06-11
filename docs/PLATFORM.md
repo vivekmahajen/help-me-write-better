@@ -42,7 +42,8 @@ layered around it.
 | Saved docs + versions | `platform/store.py` + gateway | `POST/GET /v1/documents`, `GET/PATCH/DELETE /v1/documents/{id}`, `GET/POST /v1/documents/{id}/versions`. Bodies stored **only** on explicit save; strict per-user ownership. |
 | Preferences sync | `platform/store.py` + gateway | `GET/PUT /v1/preferences` (JSON blob: default tone/audience/dialect). |
 | History | `platform/store.py` + gateway | `GET /v1/history` over the usage log — **metadata only, no document bodies**. |
-| Versioned gateway | `platform/gateway.py` | WSGI app: `GET /v1`, `/v1/account`, `/v1/usage`, `/v1/history`, `/v1/preferences`, `/v1/documents…`, `POST /v1/improve` (API-key auth). |
+| Real-time check (#1) | `write_better/realtime.py` + `POST /v1/check` | Low-latency "as you type" path: local rules pass (spelling/grammar/punctuation/style/caps), changed-sentence diff, per-span cache. Normalized `{range, type, severity, message, replacements}` suggestions. **Uncapped, ~0 cost** (no model call); a `deep_check` hook can add a cheap-model pass later. |
+| Versioned gateway | `platform/gateway.py` | WSGI app: `GET /v1`, `/v1/account`, `/v1/usage`, `/v1/history`, `/v1/preferences`, `/v1/documents…`, `POST /v1/improve`, `POST /v1/check` (API-key auth). |
 | OpenAPI contract | `platform/openapi.py` | OpenAPI 3.1 spec served at `GET /v1/openapi.json`; dependency-free docs viewer at `GET /v1/docs`. Single source of truth, cross-checked against live routes in tests. |
 | JS/TS SDK | `sdk/js/` | `@help-me-write-better/sdk` — ESM JS + TypeScript declarations, zero deps, Node 18+. Typed methods for every endpoint. |
 | Composed app | `platform/wsgi.py` | `/v1/*` → gateway, else the existing demo app. |
@@ -73,8 +74,10 @@ Per the build order, **not** in this slice:
   history, preferences, the OpenAPI spec + JS/TS SDK, web login + OAuth, and real
   Stripe billing are all done (see the table above). The web UI is still the
   unauthenticated demo — routing it through the gateway with login is a small
-  follow-up. Next up the program: **Phase 2** — the real-time check path (#1)
-  then the browser extension (#2).
+  follow-up.
+- **Phase 2 started:** the real-time check path (#1) is done (see the table). Next
+  is the **browser extension (#2)** — a thin client of `POST /v1/check` rendering
+  the shared suggestion model as inline underlines + accept/dismiss cards.
 - **Phase 2:** the low-latency real-time check path (#1), then the browser
   extension (#2).
 - **Phase 3:** Word + Docs add-ins (#3).

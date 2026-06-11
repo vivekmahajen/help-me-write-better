@@ -43,6 +43,12 @@ export class WriteBetterClient {
   // --- engine ---
   improve(request) { return this._request("POST", "/v1/improve", request); }
 
+  // --- real-time inline check ---
+  check(text, previous) {
+    const body = previous !== undefined ? { text, previous } : { text };
+    return this._request("POST", "/v1/check", body);
+  }
+
   // --- account / usage / history / preferences ---
   getAccount() { return this._request("GET", "/v1/account"); }
   getUsage() { return this._request("GET", "/v1/usage"); }
