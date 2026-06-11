@@ -14,14 +14,23 @@ import os
 
 from ..web import app as engine_app
 from .gateway import make_gateway
+from .oauth import providers_from_env
 from .store import Store
+from .webauth import make_webauth
 
 _store = Store(os.environ.get("WB_DB_PATH", "wb.db"))
 _gateway = make_gateway(_store)
+_webauth = make_webauth(
+    _store,
+    oauth_providers=providers_from_env(),
+    base_url=os.environ.get("WB_BASE_URL", "http://localhost"),
+)
 
 
 def app(environ, start_response):
     path = environ.get("PATH_INFO", "/")
     if path == "/v1" or path.startswith("/v1/"):
         return _gateway(environ, start_response)
+    if path == "/auth" or path.startswith("/auth/"):
+        return _webauth(environ, start_response)
     return engine_app(environ, start_response)

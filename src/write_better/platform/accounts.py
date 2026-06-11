@@ -17,6 +17,7 @@ from .store import Store
 
 _PBKDF2_ITERATIONS = 120_000
 _KEY_PREFIX = "wbk_"
+_SESSION_TTL_SECONDS = 30 * 24 * 3600  # 30 days
 
 
 # --- passwords ----------------------------------------------------------------
@@ -82,3 +83,43 @@ def authenticate_key(store: Store, token: Optional[str]) -> Optional[dict]:
         return None
     store.touch_api_key(record["id"])
     return store.get_user(record["user_id"])
+
+
+# --- sessions (web/desktop/mobile cookie auth) --------------------------------
+
+def create_session(store: Store, user_id: int) -> str:
+    """Create a session and return its opaque token (store keeps only a hash)."""
+    token = secrets.token_hex(24)
+    store.insert_session(user_id, _hash_key(token), _SESSION_TTL_SECONDS)
+    return token
+
+
+def authenticate_session(store: Store, token: Optional[str]) -> Optional[dict]:
+    """Resolve a session token to its user, or None if missing/expired."""
+    if not token:
+        return None
+    return store.get_session_user(_hash_key(token))
+
+
+def destroy_session(store: Store, token: Optional[str]) -> None:
+    if token:
+        store.delete_session(_hash_key(token))
+
+
+# --- OAuth account linking ----------------------------------------------------
+
+def get_or_create_oauth_user(store: Store, provider: str, subject: str,
+                             email: str) -> dict:
+    """Find the user for this OAuth identity, linking or creating as needed.
+
+    Resolution: (1) existing identity -> that user; (2) existing email -> link
+    the identity to it; (3) otherwise create a passwordless user and link.
+    """
+    user = store.get_user_by_oauth(provider, subject)
+    if user:
+        return user
+    user = store.get_user_by_email(email)
+    if user is None:
+        user = store.insert_user(email, password_hash=None)  # passwordless (OAuth-only)
+    store.link_oauth_identity(user["id"], provider, subject)
+    return user

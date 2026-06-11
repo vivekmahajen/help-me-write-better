@@ -75,7 +75,32 @@ CREATE TABLE IF NOT EXISTS preferences (
     user_id INTEGER PRIMARY KEY REFERENCES users(id),
     data    TEXT NOT NULL DEFAULT '{}'
 );
+
+-- Web/desktop/mobile sessions (cookie-based). Stored as a hash of the token.
+CREATE TABLE IF NOT EXISTS sessions (
+    id          INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id     INTEGER NOT NULL REFERENCES users(id),
+    token_hash  TEXT UNIQUE NOT NULL,
+    created_at  INTEGER NOT NULL,
+    expires_at  INTEGER NOT NULL
+);
+CREATE INDEX IF NOT EXISTS ix_sessions_user ON sessions(user_id);
+
+-- Linked OAuth identities (Google/Microsoft). One row per (provider, subject).
+CREATE TABLE IF NOT EXISTS oauth_identities (
+    id         INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id    INTEGER NOT NULL REFERENCES users(id),
+    provider   TEXT NOT NULL,
+    subject    TEXT NOT NULL,
+    created_at INTEGER NOT NULL,
+    UNIQUE(provider, subject)
+);
 """
+
+# Columns added after the initial release; applied as idempotent migrations.
+_MIGRATIONS = [
+    ("users", "stripe_customer_id", "TEXT"),
+]
 
 
 class Store:
@@ -89,6 +114,16 @@ class Store:
         self._lock = threading.Lock()
         with self._lock:
             self._conn.executescript(_SCHEMA)
+            self._migrate()
+
+    def _migrate(self) -> None:
+        """Add columns introduced after the initial release (idempotent)."""
+        for table, column, decl in _MIGRATIONS:
+            cols = {r["name"] for r in
+                    self._conn.execute(f"PRAGMA table_info({table})").fetchall()}
+            if column not in cols:
+                self._conn.execute(f"ALTER TABLE {table} ADD COLUMN {column} {decl}")
+        self._conn.commit()
 
     def close(self) -> None:
         self._conn.close()
@@ -330,6 +365,67 @@ class Store:
             )
             self._conn.commit()
         return data
+
+    # --- sessions ------------------------------------------------------------
+
+    def insert_session(self, user_id: int, token_hash: str, ttl_seconds: int) -> dict:
+        now = int(time.time())
+        with self._lock:
+            cur = self._conn.execute(
+                "INSERT INTO sessions(user_id, token_hash, created_at, expires_at) "
+                "VALUES (?,?,?,?)",
+                (user_id, token_hash, now, now + ttl_seconds),
+            )
+            self._conn.commit()
+            return self._row("sessions", cur.lastrowid)
+
+    def get_session_user(self, token_hash: str) -> Optional[dict]:
+        row = self._conn.execute(
+            "SELECT u.* FROM sessions s JOIN users u ON u.id = s.user_id "
+            "WHERE s.token_hash = ? AND s.expires_at > ?",
+            (token_hash, int(time.time())),
+        ).fetchone()
+        return dict(row) if row else None
+
+    def delete_session(self, token_hash: str) -> None:
+        with self._lock:
+            self._conn.execute("DELETE FROM sessions WHERE token_hash = ?", (token_hash,))
+            self._conn.commit()
+
+    # --- oauth identities ----------------------------------------------------
+
+    def get_user_by_oauth(self, provider: str, subject: str) -> Optional[dict]:
+        row = self._conn.execute(
+            "SELECT u.* FROM oauth_identities o JOIN users u ON u.id = o.user_id "
+            "WHERE o.provider = ? AND o.subject = ?",
+            (provider, subject),
+        ).fetchone()
+        return dict(row) if row else None
+
+    def link_oauth_identity(self, user_id: int, provider: str, subject: str) -> None:
+        with self._lock:
+            self._conn.execute(
+                "INSERT OR IGNORE INTO oauth_identities(user_id, provider, subject, created_at) "
+                "VALUES (?,?,?,?)",
+                (user_id, provider, subject, int(time.time())),
+            )
+            self._conn.commit()
+
+    # --- stripe customer mapping ---------------------------------------------
+
+    def set_stripe_customer(self, user_id: int, customer_id: str) -> None:
+        with self._lock:
+            self._conn.execute(
+                "UPDATE users SET stripe_customer_id = ? WHERE id = ?",
+                (customer_id, user_id),
+            )
+            self._conn.commit()
+
+    def get_user_by_stripe_customer(self, customer_id: str) -> Optional[dict]:
+        row = self._conn.execute(
+            "SELECT * FROM users WHERE stripe_customer_id = ?", (customer_id,)
+        ).fetchone()
+        return dict(row) if row else None
 
     # --- internal ------------------------------------------------------------
 
