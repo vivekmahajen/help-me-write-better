@@ -109,6 +109,16 @@ def spec() -> dict:
                     },
                 }
             },
+            "/v1/check": {
+                "post": {
+                    "operationId": "check",
+                    "summary": "Real-time inline check (local rules, uncapped)",
+                    "requestBody": _json_body("CheckRequest"),
+                    "responses": {"200": _json_resp("Suggestions", "CheckResponse"),
+                                  "400": _err("Invalid request"),
+                                  "401": _err("Unauthorized")},
+                }
+            },
             "/v1/documents": {
                 "get": {
                     "operationId": "listDocuments",
@@ -339,6 +349,36 @@ def _schemas() -> dict:
         },
         "DeleteResult": {
             "type": "object", "properties": {"deleted": {"type": "boolean"}},
+        },
+        "CheckRequest": {
+            "type": "object",
+            "properties": {
+                "text": {"type": "string", "description": "The current text to check"},
+                "previous": {"type": "string",
+                             "description": "Prior text; only changed sentences are re-checked"},
+            },
+            "required": ["text"],
+        },
+        "Suggestion": {
+            "type": "object",
+            "properties": {
+                "range": {
+                    "type": "object",
+                    "properties": {"start": {"type": "integer"}, "end": {"type": "integer"}},
+                },
+                "type": {"type": "string",
+                         "enum": ["spelling", "grammar", "punctuation", "style", "capitalization"]},
+                "severity": {"type": "string", "enum": ["low", "medium", "high"]},
+                "message": {"type": "string"},
+                "replacements": {"type": "array", "items": {"type": "string"}},
+            },
+        },
+        "CheckResponse": {
+            "type": "object",
+            "properties": {
+                "suggestions": {"type": "array", "items": _ref("Suggestion")},
+                "count": {"type": "integer"},
+            },
         },
     }
 

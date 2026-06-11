@@ -21,6 +21,7 @@ import os
 from ..engine import Request, improve as engine_improve
 from ..modes import resolve_services
 from ..prompt import VALID_FORMATS
+from ..realtime import check_text
 from . import accounts, metering
 from .openapi import DOCS_PAGE, spec as openapi_spec
 from .store import Store
@@ -105,6 +106,7 @@ def make_gateway(store: Store, engine=engine_improve):
                     "GET|PATCH|DELETE /v1/documents/{id}": "fetch / rename / delete a document",
                     "GET|POST /v1/documents/{id}/versions": "list / add a version",
                     "POST /v1/improve": "run the engine (metered, capped)",
+                    "POST /v1/check": "real-time inline check (local, uncapped)",
                     "GET /v1/openapi.json": "the OpenAPI 3.1 contract",
                     "GET /v1/docs": "human-readable API docs",
                 },
@@ -148,9 +150,33 @@ def make_gateway(store: Store, engine=engine_improve):
         if rest == ["improve"] and method == "POST":
             return _improve(store, engine, user, environ, start_response)
 
+        if rest == ["check"] and method == "POST":
+            return _check(store, user, environ, start_response)
+
         return _json(start_response, "404 Not Found", {"error": "no such endpoint"})
 
     return app
+
+
+def _check(store, user, environ, start_response):
+    """Real-time inline check — local rules, uncapped (no premium generation)."""
+    data, err = _read_json(environ)
+    if err:
+        return _json(start_response, "400 Bad Request", {"error": err})
+    text = data.get("text")
+    if not isinstance(text, str):
+        return _json(start_response, "400 Bad Request", {"error": "'text' (string) is required"})
+    previous = data.get("previous")
+    suggestions = check_text(text, previous if isinstance(previous, str) else None)
+
+    # Meter every call (hard rule #3) — local checks are uncapped, ~0 cost.
+    store.insert_usage(user["id"], "realtime-check", "local", premium=False,
+                       input_tokens=0, output_tokens=0)
+
+    return _json(start_response, "200 OK", {
+        "suggestions": [s.to_dict() for s in suggestions],
+        "count": len(suggestions),
+    })
 
 
 def _preferences(store, user, method, environ, start_response):

@@ -40,6 +40,16 @@ export interface ImproveResponse {
   quota: Quota;
 }
 
+export interface Suggestion {
+  range: { start: number; end: number };
+  type: "spelling" | "grammar" | "punctuation" | "style" | "capitalization";
+  severity: "low" | "medium" | "high";
+  message: string;
+  replacements: string[];
+}
+
+export interface CheckResponse { suggestions: Suggestion[]; count: number; }
+
 export interface Account { email: string; plan: string; }
 
 export interface UsageReport {
@@ -88,6 +98,7 @@ export interface ClientOptions {
 export class WriteBetterClient {
   constructor(options: ClientOptions);
   improve(request: ImproveRequest): Promise<ImproveResponse>;
+  check(text: string, previous?: string): Promise<CheckResponse>;
   getAccount(): Promise<Account>;
   getUsage(): Promise<UsageReport>;
   getHistory(): Promise<HistoryEvent[]>;
