@@ -17,12 +17,15 @@ from __future__ import annotations
 
 import json
 import os
+import time
+from collections import Counter
+from urllib.parse import parse_qs
 
 from ..engine import Request, improve as engine_improve
 from ..modes import resolve_services
 from ..prompt import VALID_FORMATS
 from ..realtime import check_text
-from . import accounts, metering
+from . import accounts, analytics, metering
 from .openapi import DOCS_PAGE, spec as openapi_spec
 from .store import Store
 
@@ -100,6 +103,7 @@ def make_gateway(store: Store, engine=engine_improve):
                 "endpoints": {
                     "GET /v1/account": "your account + plan",
                     "GET /v1/usage": "current-period quota + usage",
+                    "GET /v1/analytics": "writing analytics + weekly insights",
                     "GET /v1/history": "recent requests (metadata only)",
                     "GET|PUT /v1/preferences": "synced user preferences",
                     "GET|POST /v1/documents": "list / create saved documents",
@@ -153,6 +157,19 @@ def make_gateway(store: Store, engine=engine_improve):
         if rest == ["check"] and method == "POST":
             return _check(store, user, environ, start_response)
 
+        if rest == ["analytics"] and method == "GET":
+            qs = parse_qs(environ.get("QUERY_STRING", ""))
+            try:
+                days = max(1, min(int((qs.get("window") or ["7"])[0]), 90))
+            except ValueError:
+                days = 7
+            since = int(time.time()) - days * 86400
+            return _json(start_response, "200 OK", {
+                "window_days": days,
+                "summary": analytics.summarize(store, user["id"], since),
+                "insights": analytics.weekly_insights(store, user["id"]),
+            })
+
         return _json(start_response, "404 Not Found", {"error": "no such endpoint"})
 
     return app
@@ -168,10 +185,13 @@ def _check(store, user, environ, start_response):
         return _json(start_response, "400 Bad Request", {"error": "'text' (string) is required"})
     previous = data.get("previous")
     suggestions = check_text(text, previous if isinstance(previous, str) else None)
+    issue_types = Counter(s.type for s in suggestions)
 
     # Meter every call (hard rule #3) — local checks are uncapped, ~0 cost.
     store.insert_usage(user["id"], "realtime-check", "local", premium=False,
-                       input_tokens=0, output_tokens=0)
+                       input_tokens=0, output_tokens=0,
+                       words=analytics.word_count(text),
+                       suggestions=len(suggestions), issue_types=dict(issue_types))
 
     return _json(start_response, "200 OK", {
         "suggestions": [s.to_dict() for s in suggestions],
@@ -314,7 +334,8 @@ def _improve(store, engine, user, environ, start_response):
 
     # Meter the completed call (feeds billing + analytics).
     metering.record(store, user, result.services, result.model,
-                    result.input_tokens, result.output_tokens)
+                    result.input_tokens, result.output_tokens,
+                    words=analytics.word_count(text))
 
     return _json(start_response, "200 OK", {
         "text": result.text,

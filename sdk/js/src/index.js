@@ -52,6 +52,7 @@ export class WriteBetterClient {
   // --- account / usage / history / preferences ---
   getAccount() { return this._request("GET", "/v1/account"); }
   getUsage() { return this._request("GET", "/v1/usage"); }
+  getAnalytics(windowDays = 7) { return this._request("GET", `/v1/analytics?window=${windowDays}`); }
   getHistory() { return this._request("GET", "/v1/history").then((r) => r.history); }
   getPreferences() { return this._request("GET", "/v1/preferences").then((r) => r.preferences); }
   setPreferences(prefs) {

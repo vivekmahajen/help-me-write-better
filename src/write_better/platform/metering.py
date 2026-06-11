@@ -60,7 +60,7 @@ def check_allowed(store: Store, user: dict, modes: list[Mode],
 
 
 def record(store: Store, user: dict, services: list[Mode], model: str,
-           input_tokens: int, output_tokens: int) -> dict:
+           input_tokens: int, output_tokens: int, words: int = 0) -> dict:
     """Record a completed engine call for metering + analytics."""
     return store.insert_usage(
         user_id=user["id"],
@@ -69,4 +69,5 @@ def record(store: Store, user: dict, services: list[Mode], model: str,
         premium=consumes_premium(services),
         input_tokens=input_tokens,
         output_tokens=output_tokens,
+        words=words,
     )

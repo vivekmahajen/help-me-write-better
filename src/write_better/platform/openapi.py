@@ -80,6 +80,17 @@ def spec() -> dict:
                                   "401": _err("Unauthorized")},
                 }
             },
+            "/v1/analytics": {
+                "get": {
+                    "operationId": "getAnalytics",
+                    "summary": "Writing analytics summary + weekly insights",
+                    "parameters": [{"name": "window", "in": "query", "required": False,
+                                    "schema": {"type": "integer", "default": 7},
+                                    "description": "Window in days (1-90)"}],
+                    "responses": {"200": _json_resp("Analytics", "AnalyticsResponse"),
+                                  "401": _err("Unauthorized")},
+                }
+            },
             "/v1/preferences": {
                 "get": {
                     "operationId": "getPreferences",
@@ -378,6 +389,26 @@ def _schemas() -> dict:
             "properties": {
                 "suggestions": {"type": "array", "items": _ref("Suggestion")},
                 "count": {"type": "integer"},
+            },
+        },
+        "AnalyticsSummary": {
+            "type": "object",
+            "properties": {
+                "calls": {"type": "integer"},
+                "words": {"type": "integer"},
+                "suggestions": {"type": "integer"},
+                "by_service": {"type": "object", "additionalProperties": {"type": "integer"}},
+                "by_issue_type": {"type": "object", "additionalProperties": {"type": "integer"}},
+                "by_day": {"type": "object"},
+                "estimated_minutes_saved": {"type": "number"},
+            },
+        },
+        "AnalyticsResponse": {
+            "type": "object",
+            "properties": {
+                "window_days": {"type": "integer"},
+                "summary": _ref("AnalyticsSummary"),
+                "insights": {"type": "object"},
             },
         },
     }
