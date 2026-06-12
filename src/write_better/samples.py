@@ -178,4 +178,10 @@ SAMPLES: dict[str, str] = {
         "Users can do things easily. We think you will like it because it is helpful and "
         "nice to use."
     ),
+    "reply": (
+        "Hi — thanks for sending over the proposal. The scope looks good, but the timeline "
+        "is tight on our end and the price is a little above what we budgeted. Could you "
+        "deliver by the end of next month, and is there any flexibility on cost? Let me "
+        "know what's possible. — Dana"
+    ),
 }

@@ -216,6 +216,19 @@ _EXTENDED_MODES: tuple[Mode, ...] = (
              "non-obvious), each as a one-line pitch. If asked, expand any one into 3 supporting "
              "points. Stay relevant to the AUDIENCE and goal. No fluff, no repetition."
          )),
+    Mode("reply", "Draft a response to a message you received, in your voice.",
+         "premium", aliases=("respond", "reply-to"),
+         instruction=(
+             "The TEXT is a message the user RECEIVED (an email, DM, or comment), NOT text to edit. "
+             "Draft a reply the user can send back, on their behalf. Use the REQUEST as the user's "
+             "intent and the key points to convey (e.g., 'politely decline', 'ask for an extension', "
+             "'accept and propose Tuesday'); if REQUEST is empty, infer a reasonable, neutral "
+             "response and note that assumption in one line. Match the requested TONE (default: warm "
+             "and professional) and keep it appropriately concise. Address the sender's actual "
+             "points; do NOT invent facts, commitments, dates, prices, or names the user didn't "
+             "provide - leave [bracketed placeholders] for anything the user must fill in. Return "
+             "only the reply text (no subject line unless asked)."
+         )),
     Mode("template", "Write a marketing asset from provided details (no invented claims).",
          "premium", aliases=("marketing", "copy", "ad-copy"),
          instruction=(

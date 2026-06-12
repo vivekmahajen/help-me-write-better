@@ -114,6 +114,10 @@ PAGE = """<!doctype html>
       </div>
     </div>
 
+    <label for="request">Instruction (optional)</label>
+    <textarea id="request" style="min-height:60px"
+      placeholder="Steer the result — e.g. for 'reply', say what you want to convey back…"></textarea>
+
     <div class="opts">
       <input id="show_changes" type="checkbox">
       <label for="show_changes" style="margin:0;text-transform:none;letter-spacing:0;">
@@ -143,6 +147,9 @@ const PRESETS = {
   translate: { language: 'Spanish' },
   retone: { tone: 'professional' },
   convert: { format: 'email' },
+  reply: { tone: 'professional',
+    request: 'Accept the project, agree to deliver by the end of next month, and offer a '
+      + '10% discount for paying half upfront. Warm and professional.' },
 };
 
 // A `?service=NAME` query param preselects that service (deep-linked from the
@@ -179,6 +186,7 @@ function loadSample() {
   if (preset.language) $('language').value = preset.language;
   if (preset.tone) $('tone').value = preset.tone;
   if (preset.format) $('format').value = preset.format;
+  $('request').value = preset.request || '';
   run();
 }
 
@@ -199,6 +207,7 @@ async function run() {
     show_changes: $('show_changes').checked,
     tone: $('tone').value.trim() || null,
     language: $('language').value.trim() || null,
+    request: $('request').value.trim() || null,
   };
 
   $('go').disabled = true; $('go').textContent = 'Polishing…';
