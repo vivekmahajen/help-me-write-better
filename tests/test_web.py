@@ -16,8 +16,8 @@ class _Capture:
         self.headers = headers
 
 
-def _call(method="GET", body=None, accept=None):
-    environ = {"REQUEST_METHOD": method}
+def _call(method="GET", body=None, accept=None, path="/"):
+    environ = {"REQUEST_METHOD": method, "PATH_INFO": path}
     if accept is not None:
         environ["HTTP_ACCEPT"] = accept
     if body is not None:
@@ -41,23 +41,55 @@ def test_get_returns_service_info():
     assert set(payload["samples"]) == set(payload["services"])
 
 
-def test_browser_get_returns_html_ui():
-    cap, data = _call("GET", accept="text/html,application/xhtml+xml")
+def test_browser_root_returns_landing_page():
+    # GET / (browser) now serves the marketing landing page, not the editor.
+    cap, data = _call("GET", accept="text/html,application/xhtml+xml", path="/")
     assert cap.status == "200 OK"
-    content_type = dict(cap.headers)["Content-Type"]
-    assert "text/html" in content_type
+    assert "text/html" in dict(cap.headers)["Content-Type"]
+    assert b"<h1>" in data and b"/app" in data        # links into the editor
+    assert b'<select id="tone">' not in data          # editor controls are NOT here
+    # Real, checkable proof only — no fabricated social proof.
+    assert b"automated tests" in data
+
+
+def test_app_route_returns_editor():
+    # The demo editor moved to /app.
+    cap, data = _call("GET", accept="text/html", path="/app")
+    assert cap.status == "200 OK"
+    assert "text/html" in dict(cap.headers)["Content-Type"]
     assert b"<title>Help Me Write Better</title>" in data
-    # tone and language are dropdowns, not free-text inputs
     assert b'<select id="tone">' in data
     assert b'<select id="language">' in data
     assert b'id="sample"' in data  # "Try a sample" button
 
 
+def test_app_route_with_trailing_slash_returns_editor():
+    cap, data = _call("GET", accept="text/html", path="/app/")
+    assert b"<title>Help Me Write Better</title>" in data
+
+
+def test_app_supports_service_preselect():
+    # ?service= is honored client-side; the editor ships the preselect logic.
+    cap, data = _call("GET", accept="text/html", path="/app")
+    assert b"requestedService" in data
+    assert b"URLSearchParams" in data
+
+
 def test_curl_get_still_returns_json():
-    # No HTML in Accept -> JSON info, not the page.
+    # No HTML in Accept -> JSON info, not a page.
     cap, data = _call("GET", accept="*/*")
     assert "application/json" in dict(cap.headers)["Content-Type"]
     assert json.loads(data)["service"] == "help-me-write-better"
+
+
+def test_json_descriptor_is_byte_for_byte_unchanged():
+    # The API contract must not drift: GET (non-HTML) returns exactly _info().
+    expected = json.dumps(web._info()).encode("utf-8")
+    cap, data = _call("GET", accept="application/json")
+    assert data == expected
+    # The route does not change the descriptor, either.
+    _, at_app = _call("GET", accept="application/json", path="/app")
+    assert at_app == expected
 
 
 def test_options_preflight_has_cors():
