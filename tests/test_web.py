@@ -221,3 +221,19 @@ def test_post_success_invokes_engine(monkeypatch):
     # request was assembled from the body
     assert captured["req"].output_format == "plain"
     assert captured["req"].show_changes is True
+
+
+def test_post_accepts_protected_terms(monkeypatch):
+    captured = {}
+
+    def fake_improve(req):
+        captured["req"] = req
+        return Result(text="ok", model="claude-haiku-4-5",
+                      services=resolve_services("correct"), input_tokens=1, output_tokens=1)
+
+    monkeypatch.setattr(web, "has_api_key", lambda: True)
+    monkeypatch.setattr(web, "improve", fake_improve)
+    _call("POST", {"text": "we use kubernetes", "services": "correct",
+                   "protected_terms": ["Kubernetes", "  ", "kanban"]})
+    # blanks dropped, terms preserved
+    assert captured["req"].protected_terms == ["Kubernetes", "kanban"]

@@ -173,6 +173,9 @@ def make_gateway(store: Store, engine=engine_improve, vendor="env",
         if rest == ["preferences"]:
             return _preferences(store, user, method, environ, start_response)
 
+        if rest == ["dictionary"]:
+            return _dictionary(store, user, method, environ, start_response)
+
         if rest and rest[0] == "documents":
             return _documents(store, user, rest, method, environ, start_response)
 
@@ -418,6 +421,33 @@ def _preferences(store, user, method, environ, start_response):
     return _json(start_response, "405 Method Not Allowed", {"error": "use GET or PUT"})
 
 
+def _dictionary(store, user, method, environ, start_response):
+    """Personal dictionary CRUD. These terms are injected into every improve call
+    as PROTECTED TERMS the engine must never flag or change."""
+    uid = user["id"]
+    if method == "GET":
+        return _json(start_response, "200 OK", {"terms": store.list_dictionary(uid)})
+
+    if method in ("POST", "DELETE"):
+        data, err = _read_json(environ)
+        if err:
+            return _json(start_response, "400 Bad Request", {"error": err})
+        term = (data.get("term") or "").strip()
+        if not term:
+            return _json(start_response, "400 Bad Request", {"error": "'term' is required"})
+        if method == "POST":
+            store.add_dictionary_term(uid, term)
+            return _json(start_response, "201 Created", {"terms": store.list_dictionary(uid)})
+        # DELETE
+        removed = store.remove_dictionary_term(uid, term)
+        if not removed:
+            return _json(start_response, "404 Not Found", {"error": f"term {term!r} not in dictionary"})
+        return _json(start_response, "200 OK", {"terms": store.list_dictionary(uid)})
+
+    return _json(start_response, "405 Method Not Allowed",
+                 {"error": "use GET, POST, or DELETE"})
+
+
 def _documents(store, user, rest, method, environ, start_response):
     uid = user["id"]
 
@@ -567,6 +597,7 @@ def _improve(store, engine, user, environ, start_response):
         effort=data.get("effort", "high"),
         style_guide=style_guide or None,
         context=context or None,
+        protected_terms=store.list_dictionary(user["id"]),
     )
 
     outputs, last = [], None

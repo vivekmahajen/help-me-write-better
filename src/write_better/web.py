@@ -93,6 +93,7 @@ def _info() -> dict:
                 "reading_level": "optional",
                 "language": "optional (for translate)",
                 "request": "optional free-form instruction",
+                "protected_terms": "optional list of words to never flag or change",
                 "model": "optional model id override",
                 "effort": "low | medium | high | max; default: high",
             },
@@ -197,6 +198,8 @@ def app(environ, start_response):
         free_form=data.get("request"),
         model=data.get("model"),
         effort=data.get("effort", "high"),
+        protected_terms=[str(t).strip() for t in (data.get("protected_terms") or [])
+                         if str(t).strip()],
     )
 
     try:
