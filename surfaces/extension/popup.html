@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<style>
+  :root { --bg:#0f1221; --panel:#171b2e; --ink:#e8eaf2; --muted:#9aa3b8;
+          --accent:#6ea8fe; --line:#283049; }
+  * { box-sizing:border-box; }
+  body { width:340px; margin:0; background:var(--bg); color:var(--ink);
+         font:14px/1.5 system-ui,-apple-system,Segoe UI,Roboto,sans-serif; padding:12px; }
+  h1 { font-size:14px; margin:0 0 8px; }
+  textarea { width:100%; min-height:90px; resize:vertical; background:#0c0f1c;
+             color:var(--ink); border:1px solid var(--line); border-radius:8px; padding:8px; font:inherit; }
+  .row { display:flex; gap:8px; align-items:center; margin:8px 0; }
+  select { flex:1; background:#0c0f1c; color:var(--ink); border:1px solid var(--line);
+           border-radius:8px; padding:7px; font:inherit; }
+  button { padding:8px 12px; border:0; border-radius:8px; background:var(--accent);
+           color:#0a0e1a; font-weight:600; cursor:pointer; }
+  button.secondary { background:transparent; color:var(--accent); border:1px solid var(--line); font-weight:500; }
+  .meta { color:var(--muted); font-size:12px; min-height:16px; }
+  .bar { display:flex; justify-content:space-between; align-items:center; }
+  a { color:var(--accent); font-size:12px; cursor:pointer; }
+</style>
+</head>
+<body>
+  <h1>Help Me Write Better</h1>
+  <textarea id="text" placeholder="Paste or type text to improve…"></textarea>
+  <div class="row">
+    <select id="service"></select>
+    <button id="go">Improve</button>
+  </div>
+  <div class="bar">
+    <div class="meta" id="meta"></div>
+    <button class="secondary" id="copy" hidden>Copy</button>
+  </div>
+  <textarea id="out" placeholder="Result…" readonly style="margin-top:8px;min-height:90px;"></textarea>
+  <div class="bar" style="margin-top:8px;">
+    <a id="opts">Settings</a>
+  </div>
+  <script src="config.js"></script>
+  <script src="popup.js"></script>
+</body>
+</html>
