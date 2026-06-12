@@ -1,5 +1,7 @@
 # Help Me Write Better
 
+[![CI](https://github.com/vivekmahajen/help-me-write-better/actions/workflows/ci.yml/badge.svg)](https://github.com/vivekmahajen/help-me-write-better/actions/workflows/ci.yml)
+
 A bundled **write-better + format** engine built on Claude. Give it any text and a
 service, and it returns writing that reads better and is cleanly formatted —
 while preserving the author's meaning and voice.
