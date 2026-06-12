@@ -90,11 +90,14 @@ def run_demo(text: str, ip: str, *, limiter: RateLimiter, improve_fn, key_presen
     if not limiter.allow(ip):
         return _fallback("rate_limited")
     try:
+        # No show_changes: the hero shows the clean corrected sentence, and the
+        # page highlights what changed client-side. (show_changes returns a long
+        # markdown change-table that doesn't belong in the hero.)
         result = improve_fn(Request(
             text=text,
             services=list(DEMO_SERVICES),
             output_format="plain",
-            show_changes=True,
+            show_changes=False,
             effort="low",
         ))
     except Exception:

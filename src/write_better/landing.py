@@ -109,6 +109,10 @@ def render(flags: dict | None = None) -> str:
     html = html.replace("__WORK__", _work_html(f))
     html = html.replace("__TRUST__", _trust_html(f))
     html = html.replace("__SURFACES__", _surfaces_html(f))
+    # "Log in" only when the platform (accounts) is actually mounted here, so it's
+    # never a dead link on the engine-only demo.
+    nav_auth = '\n      <a href="/auth/login" data-cta="login">Log in</a>' if f.get("platform") else ""
+    html = html.replace("__NAV_AUTH__", nav_auth)
     return html
 
 
@@ -213,7 +217,7 @@ _TEMPLATE = """<!doctype html>
     <span class="brand">Help Me Write Better</span>
     <nav>
       <a href="#how">How it works</a>
-      <a href="#build">For developers</a>
+      <a href="#build">For developers</a>__NAV_AUTH__
       <a class="btn ghost" href="/app">Open the editor</a>
     </nav>
   </div>

@@ -5,6 +5,8 @@ a session cookie; programmatic access uses API keys on the gateway. Both back
 onto the same accounts.
 
 Endpoints:
+  GET  /auth/login | /auth/signup            -> the browser auth page (HTML)
+  GET  /auth/reset?token=...                  -> set-a-new-password page (HTML)
   POST /auth/signup   {email, password}     -> set session cookie
   POST /auth/login    {email, password}     -> set session cookie
   POST /auth/logout                          -> clear session
@@ -23,6 +25,7 @@ from http.cookies import SimpleCookie
 
 from ..plans import is_admin
 from . import accounts
+from .login_ui import AUTH_PAGE
 from .mailer import ConsoleMailer, Email
 
 SESSION_COOKIE = "wb_session"
@@ -35,6 +38,15 @@ def _json(start_response, status, payload, extra=()):
         ("Content-Type", "application/json; charset=utf-8"),
         ("Content-Length", str(len(body))),
         *extra,
+    ])
+    return [body]
+
+
+def _html(start_response, page, status="200 OK"):
+    body = page.encode("utf-8")
+    start_response(status, [
+        ("Content-Type", "text/html; charset=utf-8"),
+        ("Content-Length", str(len(body))),
     ])
     return [body]
 
@@ -89,6 +101,11 @@ def make_webauth(store, oauth_providers=None, base_url="http://localhost", maile
         if parts[:1] != ["auth"]:
             return _json(start_response, "404 Not Found", {"error": "not found"})
         rest = parts[1:]
+
+        # Browser auth page (GET): sign in / create account / forgot, and the
+        # set-a-new-password view at /auth/reset?token=... from the email link.
+        if rest in (["login"], ["signup"], ["reset"]) and method == "GET":
+            return _html(start_response, AUTH_PAGE)
 
         if rest == ["signup"] and method == "POST":
             return _signup(store, environ, start_response, secure)
