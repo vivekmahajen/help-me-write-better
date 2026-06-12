@@ -121,7 +121,13 @@ class _PgConnection:
         return _ResultCursor(cur, lastrowid=last)
 
     def executescript(self, script: str):
-        for stmt in script.split(";"):
+        # Strip `--` line comments before splitting on `;`: a comment may itself
+        # contain a semicolon (e.g. "tied to the plan; the shared guide…"), which
+        # would otherwise split mid-comment and leave invalid SQL. (SQLite's
+        # native executescript parses SQL; this shim splits, so it must not be
+        # fooled by punctuation inside comments.)
+        cleaned = re.sub(r"--[^\n]*", "", script)
+        for stmt in cleaned.split(";"):
             if stmt.strip():
                 self.execute(stmt)
         return _NullCursor()

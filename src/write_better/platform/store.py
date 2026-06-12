@@ -101,7 +101,7 @@ CREATE TABLE IF NOT EXISTS oauth_identities (
     UNIQUE(provider, subject)
 );
 
--- Teams / organizations (#8). Seats are tied to the org's plan; the shared
+-- Teams / organizations (#8). Seats are tied to the org's plan. The shared
 -- style guide is injected into the engine for every member.
 CREATE TABLE IF NOT EXISTS organizations (
     id             INTEGER PRIMARY KEY AUTOINCREMENT,
