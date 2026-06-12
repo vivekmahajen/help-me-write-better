@@ -22,7 +22,7 @@ from .gateway import make_gateway
 from .mailer import mailer_from_env
 from .oauth import providers_from_env
 from .store import Store
-from .webauth import make_webauth
+from .webauth import current_user, make_webauth
 
 _BASE_URL = os.environ.get("WB_BASE_URL", "http://localhost")
 # Persistent DB for production: set WB_DB_URL / DATABASE_URL (or let a Vercel/Neon
@@ -65,4 +65,12 @@ def app(environ, start_response):
         return _analytics(environ, start_response)
     if path == "/account" or path.startswith("/account/"):
         return _account(environ, start_response)
+    # The editor requires a signed-in account on the platform. The public
+    # landing, demo, and JSON API stay open; engine-only deploys never mount
+    # this wsgi, so their open editor is unaffected.
+    if (path.rstrip("/") == "/app"
+            and environ.get("REQUEST_METHOD", "GET").upper() in ("GET", "HEAD")
+            and not current_user(_store, environ)):
+        start_response("302 Found", [("Location", "/auth/login"), ("Content-Length", "0")])
+        return [b""]
     return engine_app(environ, start_response)
