@@ -106,7 +106,14 @@ class _PgConnection:
         if wants:
             s = s.rstrip().rstrip(";") + " RETURNING id"
         cur = self._conn.cursor()
-        cur.execute(s, tuple(params))
+        # Only bind when there are params. Passing an empty sequence makes psycopg
+        # parse the SQL for placeholders, which misfires on a literal `%`/`%s`
+        # (e.g. a `?` that `translate` rewrote inside a DDL comment) — "N
+        # placeholders but 0 parameters". DDL has no params, so send it verbatim.
+        if params:
+            cur.execute(s, tuple(params))
+        else:
+            cur.execute(s)
         last = None
         if wants:
             row = cur.fetchone()
