@@ -148,8 +148,9 @@ AUTH_PAGE = """<!doctype html>
     location.href='/app';
   });
   submit('signup', async function(){
-    await post('/auth/signup',{email:$('su_email').value.trim(),password:$('su_pw').value});
-    location.href='/app';
+    var d=await post('/auth/signup',{email:$('su_email').value.trim(),password:$('su_pw').value});
+    // New users choose a plan first; the admin/owner skips straight to the editor.
+    location.href=(d && d.user && d.user.admin) ? '/app' : '/billing/choose';
   });
   submit('forgot', async function(){
     var r=await post('/auth/forgot',{email:$('fo_email').value.trim()});

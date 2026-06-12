@@ -14,14 +14,22 @@ from __future__ import annotations
 
 import json
 
-from ..plans import PLANS
+from ..plans import PLANS, PLANS_BY_NAME
 from . import webauth
 from .billing import StripeError
+from .pricing_ui import render_plans_page
 
 
 def _json(start_response, status, payload):
     body = json.dumps(payload).encode("utf-8")
     start_response(status, [("Content-Type", "application/json; charset=utf-8"),
+                            ("Content-Length", str(len(body)))])
+    return [body]
+
+
+def _html(start_response, page, status="200 OK"):
+    body = page.encode("utf-8")
+    start_response(status, [("Content-Type", "text/html; charset=utf-8"),
                             ("Content-Length", str(len(body)))])
     return [body]
 
@@ -49,6 +57,13 @@ def make_billing(store, provider, base_url="http://localhost"):
                      for p in PLANS]
             return _json(start_response, "200 OK", {"plans": plans})
 
+        # The post-signup "Choose your plan" page + its no-payment selection.
+        if rest == ["choose"] and method == "GET":
+            return _html(start_response, render_plans_page())
+
+        if rest == ["select"] and method == "POST":
+            return _select(store, provider, environ, start_response)
+
         if rest == ["checkout"] and method == "POST":
             return _checkout(store, provider, environ, start_response)
 
@@ -61,6 +76,24 @@ def make_billing(store, provider, base_url="http://localhost"):
         return _json(start_response, "404 Not Found", {"error": "no such endpoint"})
 
     return app
+
+
+def _select(store, provider, environ, start_response):
+    """Record the user's chosen plan (no payment). Free or a paid tier; the
+    cap changes take effect immediately via the provider."""
+    user = webauth.current_user(store, environ)
+    if not user:
+        return _json(start_response, "401 Unauthorized", {"error": "not signed in"})
+    try:
+        data = json.loads(_read_json(environ) or b"{}")
+    except ValueError:
+        return _json(start_response, "400 Bad Request", {"error": "invalid JSON"})
+    plan = (data.get("plan") or "").lower()
+    if plan not in PLANS_BY_NAME:
+        return _json(start_response, "400 Bad Request",
+                     {"error": f"unknown plan {plan!r}"})
+    provider.change_plan(store, user["id"], plan)
+    return _json(start_response, "200 OK", {"ok": True, "plan": plan})
 
 
 def _checkout(store, provider, environ, start_response):
