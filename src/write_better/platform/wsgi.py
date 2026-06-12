@@ -14,6 +14,7 @@ import os
 
 from ..dbenv import resolve_db_url
 from ..web import app as engine_app
+from .analytics_web import make_analytics
 from .billing import LocalBillingProvider, StripeBillingProvider
 from .billing_web import make_billing
 from .gateway import make_gateway
@@ -47,6 +48,7 @@ def _billing_provider():
 
 
 _billing = make_billing(_store, _billing_provider(), base_url=_BASE_URL)
+_analytics = make_analytics(_store)
 
 
 def app(environ, start_response):
@@ -57,4 +59,6 @@ def app(environ, start_response):
         return _webauth(environ, start_response)
     if path == "/billing" or path.startswith("/billing/"):
         return _billing(environ, start_response)
+    if path == "/events":
+        return _analytics(environ, start_response)
     return engine_app(environ, start_response)
