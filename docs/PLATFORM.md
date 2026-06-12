@@ -63,6 +63,11 @@ curl -X POST http://localhost:8000/v1/improve \
   -d '{"text":"their going to the store","services":"correct"}'
 curl http://localhost:8000/v1/usage -H "Authorization: Bearer wbk_..."
 ```
+```bash
+# Or smoke-test every feature end-to-end in one command:
+bash scripts/smoke.sh
+```
+
 
 `POST /v1/improve` returns `{ text, model, services, usage, quota }`; a request
 that would exceed the plan's premium cap is rejected with **402** (`cap_reached`)
