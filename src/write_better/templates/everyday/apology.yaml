@@ -1,0 +1,18 @@
+id: apology
+name: Apology message
+category: everyday
+description: A genuine apology that takes responsibility and proposes to make it right.
+fields:
+  - { key: recipient, label: "Who you're apologizing to", type: text, required: false }
+  - { key: what, label: "What you did / what happened", type: textarea, required: true }
+  - { key: amends, label: "How you'll make it right (optional)", type: textarea, required: false }
+  - { key: tone, label: "Tone", type: text, required: false, default: "sincere and humble" }
+defaults: { service: write, format: plain, length: short }
+variants: 1
+prompt: |
+  Write a sincere apology{{#recipient}} to {recipient}{{/recipient}} for: {what}.
+  {{#amends}}How the writer will make it right: {amends}.{{/amends}}
+  Tone: {tone}. Take clear responsibility without excuses or an "if you were
+  offended" non-apology, acknowledge the impact, and — if amends were given —
+  state the concrete next step. Be brief and human; don't grovel. Do NOT invent
+  facts; use [bracketed placeholders] for anything unspecified.

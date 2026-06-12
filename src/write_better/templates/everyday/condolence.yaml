@@ -1,0 +1,21 @@
+id: condolence
+name: Condolence message
+category: everyday
+description: A sincere, comforting sympathy note that avoids clichés.
+fields:
+  - { key: recipient, label: "Who you're writing to", type: text, required: true }
+  - { key: deceased, label: "Who passed (name / relationship)", type: text, required: false }
+  - { key: memory, label: "A memory or quality to mention (optional)", type: textarea, required: false }
+  - { key: relationship, label: "Your relationship to them", type: text, required: false }
+defaults: { service: write, format: plain, length: short }
+variants: 1
+prompt: |
+  Write a heartfelt condolence message to {recipient}.
+  {{#deceased}}For the loss of {deceased}.{{/deceased}}
+  {{#memory}}Gently weave in this memory or quality: {memory}.{{/memory}}
+  {{#relationship}}The writer's relationship to the recipient: {relationship}.{{/relationship}}
+  Be warm, sincere, and specific: acknowledge the loss, offer comfort and concrete
+  support, and avoid clichés ("in a better place", "everything happens for a
+  reason") and toxic positivity. Keep it brief and human. Do NOT invent details
+  about the person or circumstances — leave [bracketed placeholders] where a
+  specific is needed.

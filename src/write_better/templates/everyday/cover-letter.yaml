@@ -1,0 +1,21 @@
+id: cover-letter
+name: Cover letter
+category: everyday
+description: A tailored job-application cover letter from your background and the role.
+fields:
+  - { key: role, label: "Role / job title", type: text, required: true }
+  - { key: company, label: "Company", type: text, required: true }
+  - { key: background, label: "Your relevant experience & skills", type: textarea, required: true }
+  - { key: why, label: "Why this company / role (optional)", type: textarea, required: false }
+  - { key: tone, label: "Tone", type: text, required: false, default: "warm but professional" }
+defaults: { service: write, format: plain, length: "around 300 words" }
+variants: 1
+prompt: |
+  Write a job-application cover letter for the role of {role} at {company}.
+  Draw only on this candidate background: {background}.
+  {{#why}}Why this company/role matters to the candidate: {why}.{{/why}}
+  Tone: {tone}. Structure: a strong opening hook, one or two body paragraphs
+  connecting the candidate's experience to the role's likely needs, and a
+  confident close with a call to action. Do NOT invent employers, dates, metrics,
+  or credentials the candidate didn't provide — leave [bracketed placeholders]
+  for anything specific that's missing (e.g., [hiring manager name]). One page.

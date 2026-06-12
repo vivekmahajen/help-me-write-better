@@ -1,0 +1,21 @@
+id: resignation
+name: Resignation letter
+category: everyday
+description: A professional, bridge-preserving resignation letter with proper notice.
+fields:
+  - { key: role, label: "Your role / title", type: text, required: true }
+  - { key: company, label: "Company", type: text, required: false }
+  - { key: last_day, label: "Last working day", type: text, required: true }
+  - { key: reason, label: "Reason (optional, kept gracious)", type: text, required: false }
+  - { key: tone, label: "Tone", type: text, required: false, default: "professional and gracious" }
+defaults: { service: write, format: plain, length: short }
+variants: 1
+prompt: |
+  Write a formal resignation letter from the role of {role}{{#company}} at
+  {company}{{/company}}. State a clear last working day of {last_day} and give
+  proper notice.
+  {{#reason}}Reason to mention briefly and graciously: {reason}.{{/reason}}
+  Tone: {tone}. Express genuine gratitude, offer to help with the transition, and
+  keep it positive — burn no bridges and air no grievances. Do NOT invent names,
+  dates, or details not provided; use [bracketed placeholders] (e.g., [manager
+  name]). Keep it concise.

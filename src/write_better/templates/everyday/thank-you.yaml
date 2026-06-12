@@ -1,0 +1,17 @@
+id: thank-you
+name: Thank-you note
+category: everyday
+description: A warm, specific thank-you note for a gift, help, interview, or gesture.
+fields:
+  - { key: recipient, label: "Who you're thanking", type: text, required: false }
+  - { key: reason, label: "What you're thanking them for", type: textarea, required: true }
+  - { key: detail, label: "A specific detail to mention (optional)", type: textarea, required: false }
+  - { key: tone, label: "Tone", type: text, required: false, default: "warm and genuine" }
+defaults: { service: write, format: plain, length: short }
+variants: 1
+prompt: |
+  Write a thank-you note{{#recipient}} to {recipient}{{/recipient}} for: {reason}.
+  {{#detail}}Mention this specific detail to make it personal: {detail}.{{/detail}}
+  Tone: {tone}. Be specific about what you appreciated and its impact; sound
+  personal, not formulaic. Keep it short and sincere. Do NOT invent specifics —
+  use [bracketed placeholders] if needed.
