@@ -11,11 +11,16 @@ requires-python = ">=3.10"
 license = { text = "MIT" }
 dependencies = [
     "anthropic>=0.40",
+    # Postgres driver, in the CORE deps so it installs regardless of whether the
+    # host reads requirements.txt or pyproject (e.g. Vercel). Only used when a
+    # DATABASE_URL / POSTGRES_URL is configured; harmless otherwise.
+    "psycopg[binary]>=3.1",
 ]
 
 [project.optional-dependencies]
 dev = ["pytest>=7"]
-postgres = ["psycopg[binary]>=3"]
+# Kept for back-compat (`pip install .[postgres]`); psycopg is now a core dep.
+postgres = ["psycopg[binary]>=3.1"]
 
 [project.scripts]
 write-better = "write_better.cli:main"
