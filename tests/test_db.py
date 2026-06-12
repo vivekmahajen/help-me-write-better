@@ -67,3 +67,57 @@ def test_store_still_works_on_sqlite(tmp_path):
     u = accounts.create_user(store, "a@b.com", "supersecret")
     assert store.get_user(u["id"])["email"] == "a@b.com"
     store.close()
+
+
+# --- Postgres shim: param binding (no live PG needed) -------------------------
+
+class _FakeCursor:
+    _SENTINEL = object()
+
+    def __init__(self):
+        self.calls = []
+
+    def execute(self, sql, params=_SENTINEL):
+        self.calls.append((sql, params))
+
+    def fetchone(self):
+        return {"id": 1}
+
+    def fetchall(self):
+        return []
+
+
+class _FakeConn:
+    def __init__(self):
+        self.cur = _FakeCursor()
+
+    def cursor(self):
+        return self.cur
+
+
+def _shim_with(fake):
+    conn = db._PgConnection.__new__(db._PgConnection)  # skip __init__ (no psycopg)
+    conn._conn = fake
+    return conn
+
+
+def test_paramless_ddl_is_sent_without_params():
+    # A `?` rewritten to `%s` inside a DDL comment must NOT be handed to psycopg
+    # as a placeholder — param-less statements are sent verbatim.
+    fake = _FakeConn()
+    shim = _shim_with(fake)
+    shim.execute("CREATE TABLE t (premium INTEGER) -- a generation?")
+    sql, params = fake.cur.calls[-1]
+    assert params is _FakeCursor._SENTINEL          # called as execute(sql), no params
+    assert "%s" in sql                              # the comment's ? was translated...
+    # ...but since no params are bound, psycopg treats it as literal SQL.
+
+
+def test_parameterized_query_still_binds():
+    fake = _FakeConn()
+    shim = _shim_with(fake)
+    shim.execute("SELECT * FROM users WHERE email = ?", ("a@b.com",))
+    sql, params = fake.cur.calls[-1]
+    assert sql == "SELECT * FROM users WHERE email = %s"
+    assert params == ("a@b.com",)
+

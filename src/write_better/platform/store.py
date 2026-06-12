@@ -46,7 +46,7 @@ CREATE TABLE IF NOT EXISTS usage_events (
     ts            INTEGER NOT NULL,
     services      TEXT NOT NULL,                 -- comma-separated service names
     model         TEXT NOT NULL,
-    premium       INTEGER NOT NULL DEFAULT 0,    -- consumed a premium generation?
+    premium       INTEGER NOT NULL DEFAULT 0,    -- consumed a premium generation
     input_tokens  INTEGER NOT NULL DEFAULT 0,
     output_tokens INTEGER NOT NULL DEFAULT 0,
     words         INTEGER NOT NULL DEFAULT 0,    -- analytics: words in the input
