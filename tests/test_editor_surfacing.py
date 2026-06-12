@@ -18,3 +18,10 @@ def test_scan_button_calls_scrub_endpoint():
 def test_personalize_fields_map_to_open_api():
     assert 'id="protected"' in PAGE and "protected_terms:" in PAGE   # #5 never-flag
     assert 'id="voice"' in PAGE and "voice_sample:" in PAGE          # #4 voice profile
+
+
+def test_editor_shows_account_and_logout_when_signed_in():
+    assert 'id="account"' in PAGE
+    assert "/auth/me" in PAGE                       # detects a signed-in session
+    assert 'id="logout"' in PAGE and "/auth/logout" in PAGE
+    assert 'href="/account"' in PAGE                # link to the settings page
