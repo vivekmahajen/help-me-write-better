@@ -18,15 +18,28 @@ unchanged — content negotiation only ever *adds* the HTML branches.
 from __future__ import annotations
 
 import json
+import os
 
+from . import landing
+from .demo import RateLimiter, run_demo
 from .engine import Request, has_api_key, improve
-from .landing import LANDING
 from .modes import MODES, resolve_services
 from .prompt import VALID_FORMATS
 from .samples import SAMPLES
 from .ui import PAGE
 
 _CORS = ("Access-Control-Allow-Origin", "*")
+
+# Per-IP cap for the public hero demo (POST /demo); over the cap it returns a
+# clearly-labelled canned sample instead of a live call.
+_DEMO_LIMITER = RateLimiter(limit=int(os.environ.get("WB_DEMO_LIMIT", "5")), window=3600.0)
+
+
+def _client_ip(environ) -> str:
+    fwd = environ.get("HTTP_X_FORWARDED_FOR")
+    if fwd:
+        return fwd.split(",")[0].strip()
+    return environ.get("REMOTE_ADDR", "unknown")
 
 
 def _html(start_response, status: str, html: str):
@@ -94,9 +107,10 @@ def app(environ, start_response):
     if method == "GET":
         # Browsers (Accept: text/html) get a page; everyone else gets JSON.
         if "text/html" in environ.get("HTTP_ACCEPT", ""):
-            # /app -> the demo editor; anything else -> the landing page.
+            # /app -> the demo editor; anything else -> the landing page,
+            # rendered fresh so the FEATURES_LIVE honesty gate reflects config.
             route = (environ.get("PATH_INFO", "/") or "/").rstrip("/")
-            page = PAGE if route.endswith("/app") else LANDING
+            page = PAGE if route.endswith("/app") else landing.render()
             return _html(start_response, "200 OK", page)
         return _respond(start_response, "200 OK", _info())
 
@@ -118,6 +132,14 @@ def app(environ, start_response):
     if not isinstance(data, dict):
         return _respond(start_response, "400 Bad Request",
                         {"error": "JSON body must be an object"})
+
+    # The public hero demo: rate-limited, always 200, falls back to a labelled
+    # sample. Kept off the main POST path so the engine API is unchanged.
+    if (environ.get("PATH_INFO", "/") or "/").rstrip("/").endswith("/demo"):
+        result = run_demo(data.get("text") or "", _client_ip(environ),
+                          limiter=_DEMO_LIMITER, improve_fn=improve,
+                          key_present=has_api_key())
+        return _respond(start_response, "200 OK", result.payload())
 
     text = (data.get("text") or "").strip()
     if not text:
