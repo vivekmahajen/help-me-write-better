@@ -14,6 +14,8 @@ from __future__ import annotations
 
 import os
 
+from .dbenv import has_persistent_db
+
 
 def _flag(name: str) -> bool:
     return os.environ.get(name, "").strip().lower() in ("1", "true", "yes", "on")
@@ -27,7 +29,9 @@ def _url(name: str) -> str | None:
 # values both gate *and* supply the link. All default off/None.
 FEATURES_LIVE: dict[str, object] = {
     # Accounts, API keys, metering, billing gateway reachable at this URL?
-    "platform": _flag("WB_FEATURE_PLATFORM"),
+    # Auto-on when a persistent DB is configured (that's when /auth actually
+    # works), or forced on with WB_FEATURE_PLATFORM.
+    "platform": _flag("WB_FEATURE_PLATFORM") or has_persistent_db(),
     # Trust Layer (plagiarism / AI detection / citations) live behind the gateway?
     "trust_layer": _flag("WB_FEATURE_TRUST"),
     # Distribution surfaces — a URL means "shipped, link to it"; None means "coming soon".

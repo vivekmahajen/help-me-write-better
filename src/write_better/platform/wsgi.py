@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import os
 
+from ..dbenv import resolve_db_url
 from ..web import app as engine_app
 from .billing import LocalBillingProvider, StripeBillingProvider
 from .billing_web import make_billing
@@ -22,9 +23,9 @@ from .store import Store
 from .webauth import make_webauth
 
 _BASE_URL = os.environ.get("WB_BASE_URL", "http://localhost")
-# Persistent DB for production: set WB_DB_URL / DATABASE_URL to a postgres:// URL.
-_DB = (os.environ.get("WB_DB_URL") or os.environ.get("DATABASE_URL")
-       or os.environ.get("WB_DB_PATH", "wb.db"))
+# Persistent DB for production: set WB_DB_URL / DATABASE_URL (or let a Vercel/Neon
+# POSTGRES_URL be picked up) to a postgres:// URL. Falls back to local SQLite.
+_DB = resolve_db_url()
 _store = Store(_DB)
 _gateway = make_gateway(_store)
 _webauth = make_webauth(_store, oauth_providers=providers_from_env(),

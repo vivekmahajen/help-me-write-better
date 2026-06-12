@@ -18,7 +18,6 @@ prefer a bundled ``src/`` tree if present, otherwise fall back to the installed
 package.
 """
 
-import os
 import pathlib
 import sys
 
@@ -27,18 +26,27 @@ if _SRC.is_dir() and str(_SRC) not in sys.path:
     sys.path.insert(0, str(_SRC))
 
 
-def _has_persistent_db(env=os.environ) -> bool:
-    """True when a managed database is configured (so accounts can persist)."""
-    url = (env.get("WB_DB_URL") or env.get("DATABASE_URL") or "").strip()
-    return url.startswith(("postgres://", "postgresql://"))
+from write_better.dbenv import has_persistent_db as _has_persistent_db  # noqa: E402
 
 
 def _select_app():
-    """The full platform when a Postgres DB is configured, else engine-only."""
+    """The full platform when a Postgres DB is configured, else engine-only.
+
+    If a database *is* configured but the platform can't start (driver missing,
+    DB unreachable), fall back to the engine app and log why — a working
+    marketing site beats a white-screened deploy, and the reason shows in logs.
+    """
     if _has_persistent_db():
-        from write_better.platform.wsgi import app as selected  # full platform
-    else:
-        from write_better.web import app as selected            # engine-only
+        try:
+            from write_better.platform.wsgi import app as selected  # full platform
+            return selected
+        except Exception as exc:  # pragma: no cover - deploy-time/driver issues
+            sys.stderr.write(
+                f"[app] database configured but platform failed to start "
+                f"({exc!r}); serving engine-only. Check psycopg is installed and "
+                f"the DB is reachable.\n"
+            )
+    from write_better.web import app as selected                  # engine-only
     return selected
 
 

@@ -1,1 +1,4 @@
 anthropic>=0.40
+# Postgres driver — needed when a DATABASE_URL / POSTGRES_URL is configured so
+# the platform (accounts, login, gateway) can run. Harmless when unused.
+psycopg[binary]>=3
