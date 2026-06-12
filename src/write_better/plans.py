@@ -9,9 +9,35 @@ cap; routine/standard text work is treated as effectively free and unlimited.
 
 from __future__ import annotations
 
+import os
 from dataclasses import dataclass
 
 from .modes import Mode
+
+# --- admin / owner accounts ---------------------------------------------------
+# Some accounts (the product owner) bypass every plan cap — unlimited premium
+# generations, scans, everything — and are never billed. They're identified by
+# email, independent of the plan stored on the row, so the exemption holds even
+# if their plan is never changed. The owner is included by default; add more via
+# WB_ADMIN_EMAILS (comma-separated).
+DEFAULT_ADMIN_EMAILS = "vmahajans@yahoo.com"
+
+# A finite-but-huge sentinel used as the "cap" for admins, so every downstream
+# `min(remaining, ...)` / header still does integer arithmetic without surprises.
+UNLIMITED = 1_000_000_000
+
+
+def admin_emails() -> frozenset[str]:
+    """The set of admin emails (env-overridable), lower-cased. Read at call time
+    so tests and deployments can change it without reimporting."""
+    raw = os.environ.get("WB_ADMIN_EMAILS", DEFAULT_ADMIN_EMAILS)
+    return frozenset(e.strip().lower() for e in raw.split(",") if e.strip())
+
+
+def is_admin(email: str | None) -> bool:
+    """Whether this email is an uncapped admin/owner account."""
+    return bool(email) and email.strip().lower() in admin_emails()
+
 
 # Typical share of caps a real user actually consumes (spreadsheet B16).
 DEFAULT_UTILIZATION = 0.35

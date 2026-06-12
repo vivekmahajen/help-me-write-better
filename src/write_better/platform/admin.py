@@ -73,9 +73,13 @@ def main(argv: list[str] | None = None) -> int:
         if args.cmd == "usage":
             q = metering.quota(store, user)
             s = store.usage_since(user["id"], q["period_start"])
-            print(f"{user['email']} (plan: {q['plan']})")
-            print(f"  premium generations: {q['premium_used']}/{q['premium_cap']} "
-                  f"({q['premium_remaining']} remaining this period)")
+            label = "admin/owner — unlimited" if q.get("unlimited") else q["plan"]
+            print(f"{user['email']} (plan: {label})")
+            if q.get("unlimited"):
+                print(f"  premium generations: {q['premium_used']} used (no cap)")
+            else:
+                print(f"  premium generations: {q['premium_used']}/{q['premium_cap']} "
+                      f"({q['premium_remaining']} remaining this period)")
             print(f"  calls: {s['calls']}  tokens in/out: "
                   f"{s['input_tokens']}/{s['output_tokens']}")
             return 0

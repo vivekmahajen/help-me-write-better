@@ -13,6 +13,7 @@ import math
 import re
 import secrets
 
+from ..plans import UNLIMITED, is_admin
 from .analytics import word_count
 from .store import Store
 from .vendors import VALID_MODES, VendorUnavailable
@@ -82,10 +83,11 @@ def _credits(words: int, modes: list[str]) -> dict:
 
 
 def quota(store: Store, user: dict, since_ts: int) -> dict:
-    cap = SCAN_CAPS.get(user["plan"], 0)
+    admin = is_admin(user.get("email"))
+    cap = UNLIMITED if admin else SCAN_CAPS.get(user["plan"], 0)
     used = store.scan_credits_since(user["id"], since_ts)
     return {"plan": user["plan"], "scan_cap": cap, "scan_credits_used": used,
-            "scan_credits_remaining": max(cap - used, 0)}
+            "scan_credits_remaining": max(cap - used, 0), "unlimited": admin}
 
 
 def submit(store: Store, user: dict, text: str, modes, vendor, *,

@@ -13,7 +13,7 @@ import time
 from datetime import datetime, timezone
 
 from ..modes import Mode
-from ..plans import PLANS_BY_NAME, cap_consumed_by
+from ..plans import UNLIMITED, PLANS_BY_NAME, cap_consumed_by, is_admin
 from .store import Store
 
 # Plans that may exceed their cap and be billed for overage instead of blocked.
@@ -34,9 +34,11 @@ def consumes_premium(modes: list[Mode]) -> bool:
 
 
 def quota(store: Store, user: dict, now: float | None = None) -> dict:
-    """Current-period premium usage vs the plan's cap."""
+    """Current-period premium usage vs the plan's cap. Admin/owner accounts are
+    uncapped (see :func:`write_better.plans.is_admin`)."""
+    admin = is_admin(user.get("email"))
     plan = PLANS_BY_NAME.get(user["plan"], PLANS_BY_NAME["free"])
-    cap = plan.premium_generations
+    cap = UNLIMITED if admin else plan.premium_generations
     used = store.count_premium_since(user["id"], period_start(now))
     return {
         "plan": user["plan"],
@@ -44,15 +46,16 @@ def quota(store: Store, user: dict, now: float | None = None) -> dict:
         "premium_used": used,
         "premium_remaining": max(cap - used, 0),
         "period_start": period_start(now),
+        "unlimited": admin,
     }
 
 
 def check_allowed(store: Store, user: dict, modes: list[Mode],
                   now: float | None = None) -> tuple[bool, dict]:
     """Return ``(allowed, quota)``. Denied only when a premium request would
-    exceed the cap and the plan doesn't allow overage."""
+    exceed the cap and the plan doesn't allow overage. Admins are never denied."""
     q = quota(store, user, now)
-    if not consumes_premium(modes):
+    if q["unlimited"] or not consumes_premium(modes):
         return True, q
     if q["premium_remaining"] > 0 or ALLOW_OVERAGE.get(user["plan"], False):
         return True, q

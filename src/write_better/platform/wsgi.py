@@ -16,6 +16,7 @@ from ..web import app as engine_app
 from .billing import LocalBillingProvider, StripeBillingProvider
 from .billing_web import make_billing
 from .gateway import make_gateway
+from .mailer import mailer_from_env
 from .oauth import providers_from_env
 from .store import Store
 from .webauth import make_webauth
@@ -26,7 +27,8 @@ _DB = (os.environ.get("WB_DB_URL") or os.environ.get("DATABASE_URL")
        or os.environ.get("WB_DB_PATH", "wb.db"))
 _store = Store(_DB)
 _gateway = make_gateway(_store)
-_webauth = make_webauth(_store, oauth_providers=providers_from_env(), base_url=_BASE_URL)
+_webauth = make_webauth(_store, oauth_providers=providers_from_env(),
+                        base_url=_BASE_URL, mailer=mailer_from_env())
 
 
 def _billing_provider():

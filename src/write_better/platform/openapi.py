@@ -326,6 +326,8 @@ def _schemas() -> dict:
                 "premium_used": {"type": "integer"},
                 "premium_remaining": {"type": "integer"},
                 "period_start": {"type": "integer"},
+                "unlimited": {"type": "boolean",
+                              "description": "true for uncapped admin/owner accounts"},
             },
             "required": ["plan", "premium_cap", "premium_used", "premium_remaining"],
         },
