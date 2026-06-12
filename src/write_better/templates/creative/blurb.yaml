@@ -1,0 +1,13 @@
+id: blurb
+name: Back-cover blurb
+category: creative
+description: Hooky back-cover / jacket copy that sells without spoiling.
+fields:
+  - { key: premise, label: "Premise / setup", type: textarea, required: true }
+  - { key: tone, label: "Tone", type: select, options: [tense, wry, epic, intimate, dark], default: tense }
+defaults: { service: write, format: plain, length: short }
+variants: 3
+prompt: |
+  Write {tone} back-cover blurb for this book: {premise}.
+  150-200 words: hook, the stakes, a turn that raises a question — and stop before
+  the ending. Make a reader want the first page. No spoilers, no review quotes.

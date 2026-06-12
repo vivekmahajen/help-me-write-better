@@ -1,0 +1,15 @@
+id: sensory-enrichment
+name: Sensory-detail enrichment
+category: creative
+description: Add grounding sensory detail without purple prose.
+fields:
+  - { key: passage, label: "Passage", type: textarea, required: true }
+  - { key: senses, label: "Senses to emphasize", type: text, required: false }
+defaults: { service: paraphrase, format: plain, length: medium }
+variants: 1
+prompt: |
+  Enrich this passage with grounding sensory detail{{#senses}} (emphasize: {senses}){{/senses}}.
+  Add specific, restrained detail that deepens place and mood — no purple prose, no
+  adjective pileups. Preserve all events and pacing. Return only the revised passage.
+
+  {passage}

@@ -13,6 +13,14 @@
 - SDK: `client.scan()` / `client.getScan()`; OpenAPI documents `/v1/scan*`.
 - `docs/features/plagiarism.md`, `docs/decisions/ADR-001-plagiarism-vendor.md`,
   `.env.example`.
+- **Creative / fiction tools** (Feature 5): 12 `category: creative` templates
+  (premise, beat sheets, character voice, dialogue tightener, show-don't-tell,
+  scene expander, synopsis, blurb, world-building, …). Long-form `context` on
+  `/v1/improve` (never silently truncated — over-budget returns an explicit
+  warning with the budget number). `POST /v1/fingerprint` — local prose-style
+  metrics (sentence-length distribution, dialogue ratio, adverb density, filter
+  words) tracked in analytics. `evals/character_voice_eval.py` (LLM-judge, ≥4/5).
+  SDK: `client.fingerprint()`. `docs/features/creative.md`.
 - **Marketing-copy templates** (Feature 4): a YAML template engine executed
   through `write` — `GET /v1/templates` (schema drives forms) + `template` /
   `template_fields` on `/v1/improve`, with N variants (clamped to the plan cap),

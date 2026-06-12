@@ -170,6 +170,17 @@ def spec() -> dict:
                         "responses": {"200": _json_resp("Rollup", "RollupEnvelope"),
                                       "403": _err("Admin only"), "404": _err("No team")}},
             },
+            "/v1/fingerprint": {
+                "post": {
+                    "operationId": "fingerprint",
+                    "summary": "Prose style fingerprint (sentence lengths, dialogue ratio, "
+                               "adverb density, filter words)",
+                    "requestBody": _json_body("FingerprintRequest"),
+                    "responses": {"200": _json_resp("Fingerprint", "FingerprintResponse"),
+                                  "400": _err("Invalid request"),
+                                  "401": _err("Unauthorized")},
+                }
+            },
             "/v1/scan": {
                 "post": {
                     "operationId": "scan",
@@ -364,7 +375,16 @@ def _schemas() -> dict:
                 "template_fields": {"type": "object",
                                     "description": "Values for the template's fields"},
                 "variants": {"type": "integer", "description": "Override the template's variant count"},
+                "context": {"type": "string",
+                            "description": "Preceding manuscript for long-form consistency "
+                                           "(over budget -> warning, never truncated)"},
             },
+        },
+        "FingerprintRequest": {
+            "type": "object", "properties": {"text": {"type": "string"}}, "required": ["text"],
+        },
+        "FingerprintResponse": {
+            "type": "object", "properties": {"fingerprint": {"type": "object"}},
         },
         "TemplatesResponse": {
             "type": "object",

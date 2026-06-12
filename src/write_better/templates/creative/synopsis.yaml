@@ -1,0 +1,14 @@
+id: synopsis
+name: Synopsis (query-letter length)
+category: creative
+description: A tight, query-letter-length synopsis of the whole story.
+fields:
+  - { key: story, label: "Story summary / key beats", type: textarea, required: true }
+  - { key: genre, label: "Genre", type: text, required: false }
+defaults: { service: summarize, format: plain, length: medium }
+variants: 1
+prompt: |
+  Write a query-letter-length synopsis (roughly 200-350 words) from these beats:
+  {story}. {{#genre}}Genre: {genre}.{{/genre}}
+  Present tense, full arc including the ending (synopses spoil), focus on the
+  protagonist's choices and stakes. No rhetorical questions, no back-cover teasing.

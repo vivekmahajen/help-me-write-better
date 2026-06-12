@@ -1,0 +1,14 @@
+id: scene-expander
+name: Scene expander
+category: creative
+description: Expand a summarized beat into a full scene in the same voice.
+fields:
+  - { key: beat, label: "Beat / summary to expand", type: textarea, required: true }
+  - { key: pov, label: "POV / tense", type: text, required: false }
+defaults: { service: write, format: plain, length: long }
+variants: 1
+prompt: |
+  Expand this summarized beat into a full scene: {beat}.
+  {{#pov}}POV/tense: {pov}.{{/pov}}
+  Dramatize it with action, dialogue, and a clear turn — don't just restate the
+  summary. Keep established facts; end on a beat that moves the story.

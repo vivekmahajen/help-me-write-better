@@ -85,6 +85,7 @@ _MIN_BODY = {
     "StyleGuide": {"tone": "warm"},
     "ScanRequest": {"text": "hello world", "check": {"modes": ["plagiarism"]}},
     "CiteRequest": {"cite": {"inputs": ["Some free text reference (2020)."], "style": "apa"}},
+    "FingerprintRequest": {"text": "She walked. He ran very quickly."},
 }
 
 
@@ -123,8 +124,8 @@ def test_every_spec_route_is_wired_in_the_gateway():
 
 def test_documented_paths_cover_the_core_api():
     paths = spec()["paths"]
-    for required in ("/v1/improve", "/v1/check", "/v1/scan", "/v1/scans/{id}",
-                     "/v1/cite", "/v1/citations", "/v1/templates",
+    for required in ("/v1/improve", "/v1/check", "/v1/fingerprint", "/v1/scan",
+                     "/v1/scans/{id}", "/v1/cite", "/v1/citations", "/v1/templates",
                      "/v1/usage", "/v1/analytics",
                      "/v1/account", "/v1/history", "/v1/preferences", "/v1/documents",
                      "/v1/documents/{id}", "/v1/documents/{id}/versions"):

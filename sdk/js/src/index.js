@@ -67,6 +67,9 @@ export class WriteBetterClient {
   }
   getScan(scanId) { return this._request("GET", `/v1/scans/${scanId}`); }
 
+  // --- prose style fingerprint (creative) ---
+  fingerprint(text) { return this._request("POST", "/v1/fingerprint", { text }).then((r) => r.fingerprint); }
+
   // --- citations ---
   cite(inputs, style = "apa", options = {}) {
     return this._request("POST", "/v1/cite", { cite: { inputs, style, ...options } });

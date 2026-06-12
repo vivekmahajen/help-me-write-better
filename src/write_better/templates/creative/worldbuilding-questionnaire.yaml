@@ -1,0 +1,13 @@
+id: worldbuilding-questionnaire
+name: World-building questionnaire
+category: creative
+description: Targeted world-building questions that expose story-relevant gaps.
+fields:
+  - { key: world, label: "World concept / setting", type: textarea, required: true }
+defaults: { service: write, format: markdown, length: medium }
+variants: 1
+prompt: |
+  For this setting — {world} — generate a focused world-building questionnaire:
+  15-20 questions grouped by (rules & systems, power & conflict, daily life,
+  history, sensory texture). Bias toward questions whose answers would change the
+  plot or character choices. No generic "what's the currency" filler unless it matters.

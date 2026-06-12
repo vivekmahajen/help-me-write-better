@@ -1,0 +1,14 @@
+id: save-the-cat
+name: Save the Cat beat sheet
+category: creative
+description: The 15 Save the Cat beats mapped to your story.
+fields:
+  - { key: premise, label: "Premise / logline", type: textarea, required: true }
+defaults: { service: write, format: markdown, length: long }
+variants: 1
+prompt: |
+  Map this story to the 15 Save the Cat beats: {premise}.
+  List each beat (Opening Image, Theme Stated, Setup, Catalyst, Debate, Break into
+  Two, B Story, Fun and Games, Midpoint, Bad Guys Close In, All Is Lost, Dark Night
+  of the Soul, Break into Three, Finale, Final Image) with one line of how it plays
+  out here. Keep it specific to this premise.
