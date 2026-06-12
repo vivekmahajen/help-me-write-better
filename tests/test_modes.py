@@ -45,14 +45,14 @@ def test_core_letters_are_unique_and_contiguous():
 
 def test_extended_services_carry_instructions():
     extended = [m for m in MODES if not m.letter]
-    assert len(extended) == 25
+    assert len(extended) == 26
     assert all(m.instruction.strip() for m in extended)
     # Core modes are defined in the operator prompt, not via instructions.
     assert all(not m.instruction for m in MODES if m.letter)
 
 
 def test_total_service_count():
-    assert len(MODES) == 38
+    assert len(MODES) == 39
 
 
 def test_new_services_resolve_by_name():

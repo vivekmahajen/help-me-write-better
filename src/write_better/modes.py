@@ -229,6 +229,20 @@ _EXTENDED_MODES: tuple[Mode, ...] = (
              "provide - leave [bracketed placeholders] for anything the user must fill in. Return "
              "only the reply text (no subject line unless asked)."
          )),
+    Mode("confidential", "Flag confidential/sensitive info to remove before sharing.",
+         "standard", aliases=("scrub", "confidentiality", "redact-check"),
+         instruction=(
+             "Act as a confidentiality reviewer. Flag information that probably should NOT leave "
+             "the organization or be shared externally, focusing on what a regex can't catch: "
+             "personal names, job titles tied to a person, physical/mailing addresses, internal "
+             "project or product codenames, unreleased plans, financial figures (salaries, "
+             "revenue, pricing not yet public), legal/contract terms, and security details. For "
+             "each, quote the snippet, name the category, and rate exposure risk (low/medium/high) "
+             "with a one-line reason. Do NOT rewrite the text. End with a one-line overall verdict "
+             "(safe to share / review / do not share). Note: structured PII like emails, phone "
+             "numbers, card numbers, and API keys are better caught by the deterministic scrub - "
+             "mention if you see any but don't try to enumerate every digit."
+         )),
     Mode("send-check", "One pre-send verdict: tone risk, regret flag, errors, clarity.",
          "standard", aliases=("send-readiness", "pre-send", "before-send"),
          instruction=(
