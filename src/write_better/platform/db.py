@@ -18,9 +18,7 @@ from __future__ import annotations
 import re
 import sqlite3
 
-
-def is_postgres_url(path: str) -> bool:
-    return str(path).startswith(("postgres://", "postgresql://"))
+from ..dbenv import is_postgres_url  # noqa: F401  (re-exported; single source of truth)
 
 
 def open_connection(path: str):
