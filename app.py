@@ -33,9 +33,17 @@ def _has_persistent_db(env=os.environ) -> bool:
     return url.startswith(("postgres://", "postgresql://"))
 
 
-if _has_persistent_db():
-    from write_better.platform.wsgi import app  # noqa: E402  (full platform)
-else:
-    from write_better.web import app  # noqa: E402  (engine-only)
+def _select_app():
+    """The full platform when a Postgres DB is configured, else engine-only."""
+    if _has_persistent_db():
+        from write_better.platform.wsgi import app as selected  # full platform
+    else:
+        from write_better.web import app as selected            # engine-only
+    return selected
 
-__all__ = ["app", "_has_persistent_db"]
+
+# Top-level binding so Vercel's static entrypoint scan finds ``app`` (a nested
+# import inside an if/else is invisible to it).
+app = _select_app()
+
+__all__ = ["app", "_has_persistent_db", "_select_app"]
