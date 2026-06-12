@@ -52,8 +52,17 @@ PAGE = """<!doctype html>
         min-height:200px; margin:0; }
   .err { color:var(--err); }
   .bar { display:flex; justify-content:space-between; align-items:center; }
-  .copy { width:auto; margin:0; padding:5px 10px; font-size:12px;
+  .copy, .apply { width:auto; margin:0; padding:5px 10px; font-size:12px;
           background:transparent; color:var(--accent); border:1px solid var(--line); }
+  .toolbar { display:flex; gap:8px; margin-top:10px; }
+  .mini { flex:0 0 auto; width:auto; padding:7px 12px; font-size:13px;
+          background:transparent; color:var(--accent); border:1px solid var(--line);
+          font-weight:500; border-radius:8px; cursor:pointer; }
+  .mini:disabled { opacity:.5; cursor:default; }
+  .mini.rec { background:var(--err); color:#fff; border-color:var(--err); }
+  details.adv { margin-top:12px; border-top:1px solid var(--line); padding-top:6px; }
+  details.adv summary { cursor:pointer; color:var(--muted); font-size:12px;
+          text-transform:uppercase; letter-spacing:.04em; }
 </style>
 </head>
 <body>
@@ -65,6 +74,11 @@ PAGE = """<!doctype html>
   <section class="panel">
     <label for="text">Your text</label>
     <textarea id="text" placeholder="Paste the text you want to improve…"></textarea>
+    <div class="toolbar">
+      <button id="mic" class="mini" type="button" title="Dictate with your voice">🎤 Dictate</button>
+      <button id="scan" class="mini" type="button"
+        title="Find emails, numbers, and keys — runs locally, no model">Scan for sensitive info</button>
+    </div>
 
     <label>Services</label>
     <div id="services" class="chips"></div>
@@ -124,6 +138,16 @@ PAGE = """<!doctype html>
         Include a summary of changes</label>
     </div>
 
+    <details class="adv">
+      <summary>Personalize (optional)</summary>
+      <label for="protected">Never-flag words (comma-separated)</label>
+      <input id="protected" type="text"
+        placeholder="Words to leave exactly as-is — e.g. Kubernetes, kanban, Acme">
+      <label for="voice">Voice sample — paste a few lines you wrote, so edits sound like you</label>
+      <textarea id="voice" style="min-height:70px"
+        placeholder="A few sentences in your own writing…"></textarea>
+    </details>
+
     <div class="actions">
       <button id="sample" class="secondary" type="button">Try a sample</button>
       <button id="go">Polish</button>
@@ -133,7 +157,10 @@ PAGE = """<!doctype html>
   <section class="panel">
     <div class="bar">
       <div class="meta" id="meta">Result will appear here.</div>
-      <button class="copy" id="copy" hidden>Copy</button>
+      <div>
+        <button class="apply" id="apply" type="button" hidden>↑ Use redacted</button>
+        <button class="copy" id="copy" hidden>Copy</button>
+      </div>
     </div>
     <pre id="out"></pre>
   </section>
@@ -208,10 +235,13 @@ async function run() {
     tone: $('tone').value.trim() || null,
     language: $('language').value.trim() || null,
     request: $('request').value.trim() || null,
+    protected_terms: ($('protected').value || '').split(',').map(s => s.trim()).filter(Boolean),
+    voice_sample: $('voice').value.trim() || null,
   };
 
   $('go').disabled = true; $('go').textContent = 'Polishing…';
-  $('meta').textContent = ''; $('out').textContent = ''; $('copy').hidden = true;
+  $('meta').textContent = ''; $('out').textContent = '';
+  $('copy').hidden = true; $('apply').hidden = true;
   try {
     const res = await fetch('/', {
       method: 'POST',
@@ -234,9 +264,77 @@ async function run() {
   }
 }
 
+// --- Dictation (#8): Web Speech API -> the text box ---
+let REC = null, recording = false;
+function setupMic() {
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SR) { $('mic').disabled = true; $('mic').title = 'Voice input needs Chrome or Edge'; return; }
+  REC = new SR(); REC.continuous = true; REC.interimResults = true; REC.lang = 'en-US';
+  REC.onresult = (e) => {
+    let final = '';
+    for (let i = e.resultIndex; i < e.results.length; i++) {
+      if (e.results[i].isFinal) final += e.results[i][0].transcript;
+    }
+    if (final) {
+      const t = $('text');
+      t.value = (t.value ? t.value.replace(/\\s+$/, '') + ' ' : '') + final.trim();
+    }
+  };
+  REC.onend = () => { if (recording) REC.start(); };   // keep listening until Stop
+}
+function toggleMic() {
+  if (!REC) return;
+  recording = !recording;
+  if (recording) {
+    const d = document.querySelector('#services input[value="dictate"]');
+    if (d) d.checked = true;                            // so Polish cleans the transcript
+    REC.start();
+    $('mic').textContent = '● Stop'; $('mic').classList.add('rec');
+    $('meta').textContent = 'Listening… speak, then Stop and Polish to clean it up.';
+  } else {
+    REC.stop();
+    $('mic').textContent = '🎤 Dictate'; $('mic').classList.remove('rec');
+  }
+}
+
+// --- Confidentiality scan (#7): POST /scrub, runs locally with no model ---
+let lastRedacted = '';
+async function scanText() {
+  const text = $('text').value.trim();
+  if (!text) { $('meta').innerHTML = '<span class="err">Enter some text first.</span>'; return; }
+  $('scan').disabled = true;
+  try {
+    const res = await fetch('/scrub', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text }),
+    });
+    const data = await res.json();
+    if (data.clean) {
+      $('meta').textContent = 'No emails, numbers, or keys found.';
+      $('out').textContent = ''; $('copy').hidden = true; $('apply').hidden = true;
+      return;
+    }
+    const counts = Object.entries(data.counts).map(([k, n]) => n + ' ' + k).join(', ');
+    $('meta').innerHTML = '<span class="err">Found: ' + counts + '</span> — redacted copy below.';
+    $('out').textContent = data.redacted;
+    lastRedacted = data.redacted;
+    $('copy').hidden = false; $('apply').hidden = false;
+  } catch (e) {
+    $('meta').innerHTML = '<span class="err">Scan failed: ' + e + '</span>';
+  } finally {
+    $('scan').disabled = false;
+  }
+}
+
 $('go').addEventListener('click', run);
 $('sample').addEventListener('click', loadSample);
+$('mic').addEventListener('click', toggleMic);
+$('scan').addEventListener('click', scanText);
+$('apply').addEventListener('click', () => {
+  if (lastRedacted) { $('text').value = lastRedacted; $('apply').hidden = true; }
+});
 $('copy').addEventListener('click', () => navigator.clipboard.writeText($('out').textContent));
+setupMic();
 init();
 </script>
 </body>
