@@ -192,6 +192,16 @@ def spec() -> dict:
                                   "401": _err("Unauthorized"), "404": _err("No such scan")},
                 }
             },
+            "/v1/templates": {
+                "get": {
+                    "operationId": "listTemplates",
+                    "summary": "Template library (schema drives dynamic forms)",
+                    "parameters": [{"name": "category", "in": "query", "required": False,
+                                    "schema": {"type": "string"}}],
+                    "responses": {"200": _json_resp("Templates", "TemplatesResponse"),
+                                  "401": _err("Unauthorized")},
+                }
+            },
             "/v1/cite": {
                 "post": {
                     "operationId": "cite",
@@ -350,8 +360,15 @@ def _schemas() -> dict:
                 "model": {"type": "string"},
                 "effort": {"type": "string", "enum": ["low", "medium", "high", "max"],
                            "default": "high"},
+                "template": {"type": "string", "description": "Template id (see GET /v1/templates)"},
+                "template_fields": {"type": "object",
+                                    "description": "Values for the template's fields"},
+                "variants": {"type": "integer", "description": "Override the template's variant count"},
             },
-            "required": ["text"],
+        },
+        "TemplatesResponse": {
+            "type": "object",
+            "properties": {"templates": {"type": "array", "items": {"type": "object"}}},
         },
         "ImproveResponse": {
             "type": "object",

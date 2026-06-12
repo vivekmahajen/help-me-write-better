@@ -1,0 +1,15 @@
+id: blog-outline
+name: Blog outline from keyword
+category: marketing
+description: A logical blog outline built around a target keyword and intent.
+fields:
+  - { key: keyword, label: "Target keyword", type: text, required: true }
+  - { key: audience, label: "Audience", type: text, required: true }
+  - { key: angle, label: "Angle / unique take", type: text, required: false }
+defaults: { service: write, format: markdown, length: medium }
+variants: 1
+prompt: |
+  Create a blog outline targeting "{keyword}" for {audience}.
+  {{#angle}}Take this angle: {angle}.{{/angle}}
+  Include a working title, a one-line intro hook, 4-7 H2 sections each with 2-4
+  sub-bullets, and a conclusion with a CTA. Match likely search intent; don't pad.

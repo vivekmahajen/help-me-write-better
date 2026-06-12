@@ -1,0 +1,17 @@
+id: product-description
+name: Product description (e-commerce)
+category: marketing
+description: Persuasive e-commerce product description with scannable benefits.
+fields:
+  - { key: product, label: "Product name", type: text, required: true }
+  - { key: features, label: "Key features (comma-separated)", type: text, required: true }
+  - { key: audience, label: "Who it's for", type: text, required: false }
+  - { key: tone, label: "Tone", type: select, options: [warm, premium, playful, minimal], default: warm }
+defaults: { service: write, format: markdown, length: medium }
+variants: 2
+prompt: |
+  Write an e-commerce product description for {product} in a {tone} tone.
+  {{#audience}}Written for: {audience}.{{/audience}}
+  Open with a one-line hook, then turn these features into benefits as a short
+  bulleted list: {features}. Close with a confident one-liner. Do not invent specs
+  or claims beyond what's given.

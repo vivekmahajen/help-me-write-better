@@ -1,0 +1,15 @@
+id: linkedin-post
+name: LinkedIn post
+category: marketing
+description: A scroll-stopping LinkedIn post with a hook and a takeaway.
+fields:
+  - { key: topic, label: "Topic / angle", type: text, required: true }
+  - { key: audience, label: "Audience", type: text, required: true }
+  - { key: cta, label: "Ask / CTA", type: text, required: false }
+  - { key: tone, label: "Tone", type: select, options: [insightful, contrarian, story, practical], default: insightful }
+defaults: { service: write, format: plain, length: medium }
+variants: 2
+prompt: |
+  Write a {tone} LinkedIn post about {topic} for {audience}. Open with a strong
+  one-line hook, use short punchy lines and whitespace, deliver one clear takeaway.
+  {{#cta}}End with: {cta}.{{/cta}} No hashtags spam (max 3), no "Agree?" bait.

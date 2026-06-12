@@ -1,0 +1,16 @@
+id: seo-meta
+name: SEO meta title + description
+category: marketing
+description: Search-optimized meta title and description within length limits.
+fields:
+  - { key: page, label: "Page topic", type: text, required: true }
+  - { key: keyword, label: "Primary keyword", type: text, required: true }
+  - { key: brand, label: "Brand name", type: text, required: false }
+defaults: { service: write, format: plain, length: short }
+variants: 3
+prompt: |
+  Write an SEO meta title (≤60 characters) and meta description (≤155 characters)
+  for a page about {page}, targeting the keyword "{keyword}".
+  {{#brand}}Include the brand "{brand}" in the title if it fits.{{/brand}}
+  Front-load the keyword naturally; the description must earn the click, not stuff
+  keywords. Output "Title:" and "Description:" with the character counts.
