@@ -1,0 +1,16 @@
+id: character-profile
+name: Character profile builder
+category: creative
+description: A rounded character profile from a few traits.
+fields:
+  - { key: name, label: "Character name", type: text, required: true }
+  - { key: role, label: "Role in story", type: text, required: true }
+  - { key: traits, label: "Known traits / notes", type: textarea, required: false }
+defaults: { service: write, format: markdown, length: medium }
+variants: 1
+prompt: |
+  Build a character profile for {name}, the {role}.
+  {{#traits}}Starting notes: {traits}.{{/traits}}
+  Cover: core want vs. need, defining wound, voice (how they speak), contradictions,
+  and one telling habit. Make them specific and a little surprising — no archetype
+  filler.

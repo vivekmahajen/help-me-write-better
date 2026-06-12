@@ -184,6 +184,7 @@ export class WriteBetterClient {
   check(text: string, previous?: string): Promise<CheckResponse>;
   scan(text: string, modes?: ("plagiarism" | "ai_detection")[], minMatchPct?: number): Promise<ScanResponse>;
   getScan(scanId: string): Promise<ScanResponse>;
+  fingerprint(text: string): Promise<Record<string, unknown>>;
   cite(inputs: string[], style?: "apa" | "mla" | "chicago", options?: Record<string, unknown>): Promise<CiteResponse>;
   listCitations(): Promise<unknown[]>;
   getAccount(): Promise<Account>;

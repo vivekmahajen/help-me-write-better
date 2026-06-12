@@ -1,0 +1,15 @@
+id: show-dont-tell
+name: Show, don't tell pass
+category: creative
+description: Convert told emotion/state into shown action and detail.
+fields:
+  - { key: passage, label: "Passage", type: textarea, required: true }
+defaults: { service: paraphrase, format: plain, length: medium }
+variants: 1
+prompt: |
+  Revise this passage to show rather than tell: replace stated emotions and summary
+  ("she was nervous") with concrete action, sensory detail, and behavior that implies
+  them. Keep events and facts unchanged; don't inflate length needlessly. Return only
+  the revised passage.
+
+  {passage}

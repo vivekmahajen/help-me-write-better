@@ -1,0 +1,15 @@
+id: beat-sheet-three-act
+name: Three-act beat sheet
+category: creative
+description: A three-act structure beat sheet for a premise.
+fields:
+  - { key: premise, label: "Premise / logline", type: textarea, required: true }
+  - { key: protagonist, label: "Protagonist", type: text, required: false }
+defaults: { service: write, format: markdown, length: long }
+variants: 1
+prompt: |
+  Build a three-act beat sheet for: {premise}.
+  {{#protagonist}}Protagonist: {protagonist}.{{/protagonist}}
+  Act I (setup, inciting incident, first-act break), Act II (rising action,
+  midpoint, low point), Act III (climax, resolution). One or two lines per beat,
+  causally connected. Don't write prose — just the beats.

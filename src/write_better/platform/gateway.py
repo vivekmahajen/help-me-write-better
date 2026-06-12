@@ -25,7 +25,11 @@ from ..citation import cite_batch, default_http
 from ..engine import Request, improve as engine_improve
 from ..modes import resolve_services
 from ..prompt import VALID_FORMATS
-from ..realtime import check_text
+from ..realtime import check_text, style_fingerprint
+
+# Long-form context budget (chars). Over budget -> explicit warning, never a silent
+# truncation. Our models carry 1M-token windows, so this is generous.
+CONTEXT_BUDGET_CHARS = 200_000
 from ..templating import (
     MissingFields, get_template, list_templates, load_templates, validate_and_render,
 )
@@ -126,6 +130,7 @@ def make_gateway(store: Store, engine=engine_improve, vendor="env",
                     "GET|POST /v1/documents/{id}/versions": "list / add a version",
                     "POST /v1/improve": "run the engine (metered, capped)",
                     "POST /v1/check": "real-time inline check (local, uncapped)",
+                    "POST /v1/fingerprint": "prose style fingerprint (local, uncapped)",
                     "POST /v1/scan": "plagiarism / AI-detection scan (external, metered)",
                     "GET /v1/scans/{id}": "fetch a scan result",
                     "POST /v1/cite": "generate/format citations (DOI/ISBN/URL/free-text)",
@@ -176,6 +181,9 @@ def make_gateway(store: Store, engine=engine_improve, vendor="env",
 
         if rest == ["check"] and method == "POST":
             return _check(store, user, environ, start_response)
+
+        if rest == ["fingerprint"] and method == "POST":
+            return _fingerprint(store, user, environ, start_response)
 
         if rest == ["scan"] and method == "POST":
             return _scan(store, vendor, user, environ, start_response)
@@ -530,6 +538,15 @@ def _improve(store, engine, user, environ, start_response):
     org = store.get_org_for_user(user["id"])
     style_guide = teams.render_style_guide(teams.get_style_guide(store, org["id"])) if org else None
 
+    # Long-form context — never silently truncate; warn + omit if over budget.
+    warnings = []
+    context = data.get("context")
+    if context and len(context) > CONTEXT_BUDGET_CHARS:
+        warnings.append(
+            f"context ({len(context)} chars) exceeds the {CONTEXT_BUDGET_CHARS}-char "
+            f"budget and was not applied — split the manuscript or trim it")
+        context = None
+
     req = Request(
         text=text,
         services=[m.name for m in modes],
@@ -544,6 +561,7 @@ def _improve(store, engine, user, environ, start_response):
         model=data.get("model"),
         effort=data.get("effort", "high"),
         style_guide=style_guide or None,
+        context=context or None,
     )
 
     outputs, last = [], None
@@ -572,7 +590,23 @@ def _improve(store, engine, user, environ, start_response):
     if data.get("template"):
         body["template"] = data["template"]
         body["variants"] = outputs
+    if warnings:
+        body["warnings"] = warnings
     return _json(start_response, "200 OK", body)
+
+
+def _fingerprint(store, user, environ, start_response):
+    """Style fingerprint (Feature 5) — local prose metrics, uncapped + free."""
+    data, err = _read_json(environ)
+    if err:
+        return _json(start_response, "400 Bad Request", {"error": err})
+    text = data.get("text")
+    if not isinstance(text, str) or not text.strip():
+        return _json(start_response, "400 Bad Request", {"error": "'text' is required"})
+    fp = style_fingerprint(text)
+    store.insert_usage(user["id"], "style-fingerprint", "local", premium=False,
+                       input_tokens=0, output_tokens=0, words=fp["words"])
+    return _json(start_response, "200 OK", {"fingerprint": fp})
 
 
 # Lazily-built default app for deployment (uses WB_DB_PATH; real engine).

@@ -1,0 +1,14 @@
+id: dialogue-tightener
+name: Dialogue tightener
+category: creative
+description: Tighten dialogue — cut filler, sharpen subtext, keep voices distinct.
+fields:
+  - { key: passage, label: "Dialogue passage", type: textarea, required: true }
+defaults: { service: tighten, format: plain, length: medium }
+variants: 1
+prompt: |
+  Tighten this dialogue: cut greetings/filler/on-the-nose lines, let subtext do the
+  work, and keep each speaker's voice distinct. Preserve who says what and the beat's
+  outcome. Return only the revised dialogue.
+
+  {passage}

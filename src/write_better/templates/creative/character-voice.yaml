@@ -1,0 +1,17 @@
+id: character-voice
+name: Character voice pass
+category: creative
+description: Rewrite a passage in a defined character's voice (canon preserved).
+fields:
+  - { key: profile, label: "Character voice profile", type: textarea, required: true }
+  - { key: passage, label: "Passage to rewrite", type: textarea, required: true }
+defaults: { service: paraphrase, format: plain, length: medium }
+variants: 2
+prompt: |
+  Rewrite the passage below in the voice of this character. Voice profile: {profile}.
+  Preserve every plot event, fact, and named entity exactly — only the voice,
+  diction, and rhythm change. Do not add or remove events. Return only the rewritten
+  passage.
+
+  Passage:
+  {passage}

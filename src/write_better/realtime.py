@@ -18,6 +18,7 @@ normalized suggestion: ``{range, type, severity, message, replacements}``.
 from __future__ import annotations
 
 import re
+from collections import Counter
 from dataclasses import dataclass
 from functools import lru_cache
 from typing import Callable, Optional
@@ -206,6 +207,52 @@ def brand_suggestions(text: str, banned_terms=None, preferred_terms=None) -> lis
         out.append(Suggestion(m.start(), m.end(), "style", "medium",
                               "Avoid this term (team style guide).", replacements))
     return out
+
+
+# Common "filter words" that distance the reader (craft signal for fiction).
+_FILTER_WORDS = {
+    "just", "really", "very", "quite", "rather", "somewhat", "that", "then",
+    "felt", "saw", "heard", "knew", "noticed", "watched", "wondered", "seemed",
+    "began", "started", "decided", "realized", "thought", "looked",
+}
+
+
+def style_fingerprint(text: str) -> dict:
+    """Deterministic prose-style metrics (no model call) for the creative panel:
+    sentence-length distribution, dialogue ratio, adverb density, filter words."""
+    sents = [s.strip() for _, _, s in sentences(text) if s.strip()]
+    words = re.findall(r"\b[\w']+\b", text)
+    n_words = len(words) or 1
+    lengths = [len(re.findall(r"\b[\w']+\b", s)) for s in sents] or [0]
+
+    buckets = {"short_<10": 0, "medium_10_20": 0, "long_>20": 0}
+    for ln in lengths:
+        if ln < 10:
+            buckets["short_<10"] += 1
+        elif ln <= 20:
+            buckets["medium_10_20"] += 1
+        else:
+            buckets["long_>20"] += 1
+
+    adverbs = [w for w in words if w.lower().endswith("ly") and len(w) > 3]
+    filters = [w for w in words if w.lower() in _FILTER_WORDS]
+    dialogue_chars = sum(len(m) for m in re.findall(r'"[^"]*"', text)
+                         + re.findall(r"“[^”]*”", text))
+
+    return {
+        "sentences": len(sents),
+        "words": len(words),
+        "sentence_length": {
+            "mean": round(sum(lengths) / len(lengths), 1),
+            "max": max(lengths), "min": min(lengths),
+            "distribution": buckets,
+        },
+        "dialogue_ratio": round(dialogue_chars / max(len(text), 1), 3),
+        "adverb_density": round(len(adverbs) / n_words, 3),
+        "filter_words": {"count": len(filters),
+                         "density": round(len(filters) / n_words, 3),
+                         "top": [w for w, _ in Counter(w.lower() for w in filters).most_common(5)]},
+    }
 
 
 def check_text(text: str, previous: Optional[str] = None,

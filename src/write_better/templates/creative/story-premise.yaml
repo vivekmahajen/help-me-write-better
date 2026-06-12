@@ -1,0 +1,14 @@
+id: story-premise
+name: Story premise generator
+category: creative
+description: Generate distinct story premises from a seed.
+fields:
+  - { key: seed, label: "Seed (genre, theme, image, or 'surprise me')", type: text, required: true }
+  - { key: genre, label: "Genre", type: text, required: false }
+defaults: { service: write, format: markdown, length: medium }
+variants: 1
+prompt: |
+  Generate 5 distinct story premises from this seed: {seed}.
+  {{#genre}}Genre: {genre}.{{/genre}}
+  Each premise: a one-line logline + the central conflict + what makes it fresh.
+  Avoid the obvious first idea; vary tone and scope across the five.

@@ -43,6 +43,7 @@ class Request:
     model: str | None = None        # explicit override; otherwise routed
     effort: str = "high"            # low | medium | high | max (thinking models only)
     style_guide: str | None = None  # team brand-voice rules injected by the gateway
+    context: str | None = None      # preceding manuscript for long-form consistency
 
 
 @dataclass
@@ -95,6 +96,7 @@ def _build_call_kwargs(req: Request, modes: list[Mode], model: str) -> dict:
                         (m.name, m.instruction) for m in modes if m.instruction
                     ],
                     style_guide=req.style_guide,
+                    context=req.context,
                 ),
             }
         ],
