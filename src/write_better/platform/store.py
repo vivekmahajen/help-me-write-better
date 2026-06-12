@@ -153,6 +153,17 @@ CREATE TABLE IF NOT EXISTS password_resets (
 );
 CREATE INDEX IF NOT EXISTS ix_password_resets_user ON password_resets(user_id);
 
+-- Personal dictionary: per-user "never flag/change this" terms (intentional
+-- spellings, names, jargon). Injected into the engine as PROTECTED TERMS.
+CREATE TABLE IF NOT EXISTS personal_dictionary (
+    id         INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id    INTEGER NOT NULL REFERENCES users(id),
+    term       TEXT NOT NULL,
+    created_at INTEGER NOT NULL,
+    UNIQUE(user_id, term)
+);
+CREATE INDEX IF NOT EXISTS ix_personal_dictionary_user ON personal_dictionary(user_id);
+
 -- First-party product analytics for the public landing/pricing pages. Anonymous
 -- by design: event name + small JSON props + timestamp only, no user, no PII.
 CREATE TABLE IF NOT EXISTS analytics_events (
@@ -724,6 +735,50 @@ class Store:
             (user_id, since_ts),
         ).fetchone()
         return int(row["n"])
+
+    # --- personal dictionary (per-user never-flag terms) ---------------------
+
+    def add_dictionary_term(self, user_id: int, term: str) -> bool:
+        """Add a term (idempotent). Returns True if newly added, False if it
+        already existed or was blank."""
+        term = (term or "").strip()
+        if not term:
+            return False
+        with self._lock:
+            cur = self._conn.execute(
+                "INSERT OR IGNORE INTO personal_dictionary(user_id, term, created_at) "
+                "VALUES (?,?,?)",
+                (user_id, term, int(time.time())),
+            )
+            self._conn.commit()
+            # rowcount is unreliable on the PG shim; check existence instead.
+        return self._has_dictionary_term(user_id, term)
+
+    def _has_dictionary_term(self, user_id: int, term: str) -> bool:
+        row = self._conn.execute(
+            "SELECT 1 FROM personal_dictionary WHERE user_id = ? AND term = ?",
+            (user_id, term),
+        ).fetchone()
+        return row is not None
+
+    def list_dictionary(self, user_id: int) -> list[str]:
+        rows = self._conn.execute(
+            "SELECT term FROM personal_dictionary WHERE user_id = ? ORDER BY term",
+            (user_id,),
+        ).fetchall()
+        return [r["term"] for r in rows]
+
+    def remove_dictionary_term(self, user_id: int, term: str) -> bool:
+        term = (term or "").strip()
+        if not self._has_dictionary_term(user_id, term):
+            return False
+        with self._lock:
+            self._conn.execute(
+                "DELETE FROM personal_dictionary WHERE user_id = ? AND term = ?",
+                (user_id, term),
+            )
+            self._conn.commit()
+        return True
 
     # --- analytics events (anonymous, first-party) ---------------------------
 

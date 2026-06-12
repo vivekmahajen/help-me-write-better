@@ -63,6 +63,7 @@ def build_user_message(
     service_instructions: list[tuple[str, str]] | None = None,
     style_guide: str | None = None,
     context: str | None = None,
+    protected_terms: list[str] | None = None,
 ) -> str:
     """Assemble the INPUTS block the engine expects, matching the operator contract."""
     services = ", ".join(service_names) if service_names else "(infer from the request)"
@@ -78,6 +79,14 @@ def build_user_message(
     ]
     if free_form:
         lines.append(f"REQUEST       = {free_form}")
+
+    if protected_terms:
+        lines.append("")
+        lines.append("PROTECTED TERMS (the author's personal dictionary — each is correct and "
+                     "intentional; never flag, change, re-capitalize, reword, or \"correct\" "
+                     "these, and never count them as errors):")
+        for term in protected_terms:
+            lines.append(f"- {term}")
 
     if style_guide:
         lines.append("")

@@ -229,6 +229,26 @@ _EXTENDED_MODES: tuple[Mode, ...] = (
              "provide - leave [bracketed placeholders] for anything the user must fill in. Return "
              "only the reply text (no subject line unless asked)."
          )),
+    Mode("send-check", "One pre-send verdict: tone risk, regret flag, errors, clarity.",
+         "standard", aliases=("send-readiness", "pre-send", "before-send"),
+         instruction=(
+             "Produce a single SEND-READINESS check for a message the user is about to send "
+             "(email/DM/Slack). Be concise and do NOT rewrite the whole message. Output:\n"
+             "1) VERDICT: exactly one of Send | Review | Hold, with a one-line reason.\n"
+             "2) FLAGS (list only the ones that actually apply):\n"
+             "   - Regret/escalation risk: would the sender likely regret this once calm? Flag "
+             "anger, blame, sarcasm, ultimatums, ALL-CAPS, or accusatory 'you' framing, and suggest "
+             "a cooler phrasing.\n"
+             "   - Tone risk: how the recipient is likely to feel (e.g., reads as cold, terse, "
+             "passive-aggressive, defensive).\n"
+             "   - Errors: a count of grammar/spelling/punctuation issues (don't list each).\n"
+             "   - Clarity: is the ask / next step clear? Note any unanswered question or missing "
+             "context.\n"
+             "   - Commitments to double-check: promises, dates, numbers, prices, or risky words "
+             "('guarantee', 'always', 'never') the sender should verify.\n"
+             "3) TOP FIXES: the 1-3 highest-impact changes before sending.\n"
+             "If the message is clean and low-risk, return VERDICT: Send and stop. Analysis only."
+         )),
     Mode("template", "Write a marketing asset from provided details (no invented claims).",
          "premium", aliases=("marketing", "copy", "ad-copy"),
          instruction=(

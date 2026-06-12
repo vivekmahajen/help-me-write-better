@@ -20,7 +20,7 @@ def test_single_h1_and_real_proof():
     html = landing.render(ALL_OFF)
     assert html.count("<h1>") == 1
     assert "188 automated tests" in html
-    assert "37 composable services" in html
+    assert "38 composable services" in html
 
 
 def test_all_flags_off_makes_no_available_claims():

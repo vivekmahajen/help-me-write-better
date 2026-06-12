@@ -44,6 +44,7 @@ class Request:
     effort: str = "high"            # low | medium | high | max (thinking models only)
     style_guide: str | None = None  # team brand-voice rules injected by the gateway
     context: str | None = None      # preceding manuscript for long-form consistency
+    protected_terms: list[str] = field(default_factory=list)  # personal "never-flag" dictionary
 
 
 @dataclass
@@ -97,6 +98,7 @@ def _build_call_kwargs(req: Request, modes: list[Mode], model: str) -> dict:
                     ],
                     style_guide=req.style_guide,
                     context=req.context,
+                    protected_terms=req.protected_terms,
                 ),
             }
         ],

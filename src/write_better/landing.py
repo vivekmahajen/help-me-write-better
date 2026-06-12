@@ -26,7 +26,7 @@ from .features import FEATURES_LIVE, surface_states
 
 # Real, checkable proof points (keep in sync with the codebase; never invented).
 TEST_COUNT = 188
-SERVICE_COUNT = 37
+SERVICE_COUNT = 38
 
 # "How it works" deep-link chips — every name is a real service (see modes.py).
 _CHIP_SERVICES = ("correct", "clarify", "tighten", "retone", "paraphrase", "translate")
