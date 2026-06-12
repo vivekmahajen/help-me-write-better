@@ -121,3 +121,31 @@ def test_parameterized_query_still_binds():
     assert sql == "SELECT * FROM users WHERE email = %s"
     assert params == ("a@b.com",)
 
+
+def test_executescript_ignores_semicolons_in_comments():
+    fake = _FakeConn()
+    shim = _shim_with(fake)
+    shim.executescript(
+        "-- a note; with a semicolon inside it\n"
+        "CREATE TABLE a (x TEXT);\n"
+        "CREATE TABLE b (y TEXT);\n"
+    )
+    sqls = [s for s, _ in fake.cur.calls]
+    assert len(sqls) == 2                          # not split mid-comment into 3+
+    assert any("CREATE TABLE a" in s for s in sqls)
+    assert any("CREATE TABLE b" in s for s in sqls)
+    assert all("note" not in s for s in sqls)      # comment stripped, not executed
+
+
+def test_real_schema_splits_into_valid_statements():
+    # Run the actual schema through the same strip+split the PG shim uses; every
+    # resulting statement must start with a DDL keyword. Guards against ANY
+    # `;`-inside-a-comment breaking schema init on Postgres (present or future).
+    import re as _re
+    from write_better.platform.store import _SCHEMA
+    cleaned = _re.sub(r"--[^\n]*", "", _SCHEMA)
+    stmts = [s.strip() for s in cleaned.split(";") if s.strip()]
+    assert stmts
+    for s in stmts:
+        assert _re.match(r"(?is)^(CREATE|ALTER|DROP|INSERT)\b", s), s[:60]
+
