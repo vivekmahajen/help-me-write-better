@@ -28,7 +28,7 @@ from .prompt import VALID_FORMATS
 from .samples import SAMPLES
 from .ui import PAGE
 from .voice import render_voice_profile
-from . import seo
+from . import scrub, seo
 
 _CORS = ("Access-Control-Allow-Origin", "*")
 
@@ -159,6 +159,13 @@ def app(environ, start_response):
     if not isinstance(data, dict):
         return _respond(start_response, "400 Bad Request",
                         {"error": "JSON body must be an object"})
+
+    route = (environ.get("PATH_INFO", "/") or "/").rstrip("/")
+
+    # Confidentiality scrub: deterministic + offline (no model, no API key), so
+    # it runs anywhere and your text never leaves for the scan itself.
+    if route.endswith("/scrub"):
+        return _respond(start_response, "200 OK", scrub.summarize(data.get("text") or ""))
 
     # The public hero demo: rate-limited, always 200, falls back to a labelled
     # sample. Kept off the main POST path so the engine API is unchanged.

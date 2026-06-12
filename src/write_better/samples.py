@@ -189,4 +189,9 @@ SAMPLES: dict[str, str] = {
         "ridiculous. If I don't see payment by tomorrow I'm done working with you people. "
         "Just sort it out already."
     ),
+    "confidential": (
+        "Hi team — forwarding the notes from the board call. Our Q3 revenue was $4.2M "
+        "(still confidential), and we're acquiring Project Falcon next month. Reach Maria "
+        "Lopez at maria.lopez@example.com or 415-555-0148 if you have questions."
+    ),
 }
