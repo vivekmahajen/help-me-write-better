@@ -82,10 +82,14 @@ Per the build order, **not** in this slice:
   (`addins/word/`, Office.js task pane) and **Google Docs add-on**
   (`addins/google-docs/`, Apps Script Workspace Add-on — the right surface for
   Docs' canvas) (#3). All are thin clients of the gateway.
-- **Phase 4 in progress:** **analytics (#9)** and **teams + shared style guide
-  (#8)** are done (see the table). Remaining: **desktop + mobile/keyboard (#4)** —
-  client surfaces (Electron/Tauri desktop, mobile apps + custom keyboard). Visual
-  dashboards for analytics/teams are thin clients of the existing endpoints.
+- **Phase 4 complete:** analytics (#9), teams + shared style guide (#8), and the
+  **desktop + mobile/keyboard surfaces (#4)** are done — desktop wraps the web
+  experience (`clients/desktop/`, Electron); mobile ships a portable check/rewrite
+  core (`clients/mobile/`) for the app + custom keyboard. **All nine functions are
+  now built.** Remaining work is productionization, not new features: a managed
+  database for deploy, OAuth/Stripe live credentials, the heavier surfaces
+  (system-wide desktop checking, native keyboard shells), visual dashboards (thin
+  clients of the existing endpoints), and the privacy/compliance program.
 - **Phase 2:** the low-latency real-time check path (#1), then the browser
   extension (#2).
 - **Phase 3:** Word + Docs add-ins (#3).

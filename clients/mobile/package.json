@@ -1,0 +1,11 @@
+{
+  "name": "help-me-write-better-mobile-core",
+  "version": "1.0.0",
+  "description": "Shared core for the mobile app + custom keyboard",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node --test"
+  },
+  "engines": { "node": ">=18" }
+}
