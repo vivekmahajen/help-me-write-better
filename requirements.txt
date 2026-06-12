@@ -1,4 +1,5 @@
 anthropic>=0.40
-# Postgres driver — needed when a DATABASE_URL / POSTGRES_URL is configured so
-# the platform (accounts, login, gateway) can run. Harmless when unused.
-psycopg[binary]>=3
+# Postgres driver (psycopg v3) — REQUIRED when DATABASE_URL / POSTGRES_URL is set
+# so the platform (accounts, login, gateway) can connect to the database. The
+# [binary] extra ships prebuilt wheels, so the host needs no libpq/compiler.
+psycopg[binary]>=3.1
