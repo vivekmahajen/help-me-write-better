@@ -27,6 +27,7 @@ from .modes import MODES, resolve_services
 from .prompt import VALID_FORMATS
 from .samples import SAMPLES
 from .ui import PAGE
+from .voice import render_voice_profile
 from . import seo
 
 _CORS = ("Access-Control-Allow-Origin", "*")
@@ -94,6 +95,7 @@ def _info() -> dict:
                 "language": "optional (for translate)",
                 "request": "optional free-form instruction",
                 "protected_terms": "optional list of words to never flag or change",
+                "voice_sample": "optional writing sample of yours to match your voice",
                 "model": "optional model id override",
                 "effort": "low | medium | high | max; default: high",
             },
@@ -200,6 +202,7 @@ def app(environ, start_response):
         effort=data.get("effort", "high"),
         protected_terms=[str(t).strip() for t in (data.get("protected_terms") or [])
                          if str(t).strip()],
+        voice_profile=render_voice_profile(data.get("voice_sample")),
     )
 
     try:

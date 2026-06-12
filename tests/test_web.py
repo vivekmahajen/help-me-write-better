@@ -237,3 +237,19 @@ def test_post_accepts_protected_terms(monkeypatch):
                    "protected_terms": ["Kubernetes", "  ", "kanban"]})
     # blanks dropped, terms preserved
     assert captured["req"].protected_terms == ["Kubernetes", "kanban"]
+
+
+def test_post_accepts_voice_sample(monkeypatch):
+    captured = {}
+
+    def fake_improve(req):
+        captured["req"] = req
+        return Result(text="ok", model="claude-haiku-4-5",
+                      services=resolve_services("paraphrase"), input_tokens=1, output_tokens=1)
+
+    monkeypatch.setattr(web, "has_api_key", lambda: True)
+    monkeypatch.setattr(web, "improve", fake_improve)
+    _call("POST", {"text": "rewrite me", "services": "paraphrase",
+                   "voice_sample": "I write short. No fluff. Plain words only."})
+    vp = captured["req"].voice_profile
+    assert vp and "VOICE PROFILE" in vp and "No fluff" in vp

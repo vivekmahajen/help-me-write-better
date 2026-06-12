@@ -64,6 +64,7 @@ def build_user_message(
     style_guide: str | None = None,
     context: str | None = None,
     protected_terms: list[str] | None = None,
+    voice_profile: str | None = None,
 ) -> str:
     """Assemble the INPUTS block the engine expects, matching the operator contract."""
     services = ", ".join(service_names) if service_names else "(infer from the request)"
@@ -87,6 +88,10 @@ def build_user_message(
                      "these, and never count them as errors):")
         for term in protected_terms:
             lines.append(f"- {term}")
+
+    if voice_profile:
+        lines.append("")
+        lines.append(voice_profile)
 
     if style_guide:
         lines.append("")
