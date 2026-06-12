@@ -1,0 +1,11 @@
+{
+  "name": "help-me-write-better-tools-ui",
+  "version": "1.0.0",
+  "description": "Web UI panels for the Trust-Layer features (plagiarism, AI, citations, templates, fingerprint)",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node --test"
+  },
+  "engines": { "node": ">=18" }
+}
