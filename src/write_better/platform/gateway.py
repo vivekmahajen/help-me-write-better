@@ -23,6 +23,7 @@ from urllib.parse import parse_qs
 
 from ..citation import cite_batch, default_http
 from ..engine import Request, improve as engine_improve
+from ..voice import build_profile as build_voice_profile, render_voice_profile
 from ..modes import resolve_services
 from ..prompt import VALID_FORMATS
 from ..realtime import check_text, style_fingerprint
@@ -175,6 +176,9 @@ def make_gateway(store: Store, engine=engine_improve, vendor="env",
 
         if rest == ["dictionary"]:
             return _dictionary(store, user, method, environ, start_response)
+
+        if rest == ["voice"]:
+            return _voice(store, user, method, environ, start_response)
 
         if rest and rest[0] == "documents":
             return _documents(store, user, rest, method, environ, start_response)
@@ -448,6 +452,34 @@ def _dictionary(store, user, method, environ, start_response):
                  {"error": "use GET, POST, or DELETE"})
 
 
+def _voice(store, user, method, environ, start_response):
+    """Personal voice profile CRUD. The stored samples are turned into a VOICE
+    PROFILE and injected into every improve call so output sounds like the user."""
+    uid = user["id"]
+    if method == "GET":
+        vp = store.get_voice_profile(uid)
+        return _json(start_response, "200 OK",
+                     {"voice": build_voice_profile(vp["samples"]) if vp else None})
+
+    if method in ("PUT", "POST"):
+        data, err = _read_json(environ)
+        if err:
+            return _json(start_response, "400 Bad Request", {"error": err})
+        samples = (data.get("samples") or "").strip()
+        if not samples:
+            return _json(start_response, "400 Bad Request",
+                         {"error": "'samples' is required (paste a few paragraphs you wrote)"})
+        store.set_voice_profile(uid, samples)
+        return _json(start_response, "201 Created", {"voice": build_voice_profile(samples)})
+
+    if method == "DELETE":
+        store.clear_voice_profile(uid)
+        return _json(start_response, "200 OK", {"voice": None})
+
+    return _json(start_response, "405 Method Not Allowed",
+                 {"error": "use GET, PUT, or DELETE"})
+
+
 def _documents(store, user, rest, method, environ, start_response):
     uid = user["id"]
 
@@ -573,6 +605,10 @@ def _improve(store, engine, user, environ, start_response):
     org = store.get_org_for_user(user["id"])
     style_guide = teams.render_style_guide(teams.get_style_guide(store, org["id"])) if org else None
 
+    # Inject the user's personal voice profile ("sounds like me"), if they've set one.
+    vp = store.get_voice_profile(user["id"])
+    voice_profile = render_voice_profile(vp["samples"]) if vp else None
+
     # Long-form context — never silently truncate; warn + omit if over budget.
     warnings = []
     context = data.get("context")
@@ -598,6 +634,7 @@ def _improve(store, engine, user, environ, start_response):
         style_guide=style_guide or None,
         context=context or None,
         protected_terms=store.list_dictionary(user["id"]),
+        voice_profile=voice_profile,
     )
 
     outputs, last = [], None

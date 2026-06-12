@@ -153,6 +153,14 @@ CREATE TABLE IF NOT EXISTS password_resets (
 );
 CREATE INDEX IF NOT EXISTS ix_password_resets_user ON password_resets(user_id);
 
+-- Personal voice profile ("sounds like me"): a user's own writing samples,
+-- from which a style descriptor is derived and injected as VOICE PROFILE.
+CREATE TABLE IF NOT EXISTS voice_profiles (
+    user_id    INTEGER PRIMARY KEY REFERENCES users(id),
+    samples    TEXT NOT NULL DEFAULT '',
+    updated_at INTEGER NOT NULL
+);
+
 -- Personal dictionary: per-user "never flag/change this" terms (intentional
 -- spellings, names, jargon). Injected into the engine as PROTECTED TERMS.
 CREATE TABLE IF NOT EXISTS personal_dictionary (
@@ -735,6 +743,31 @@ class Store:
             (user_id, since_ts),
         ).fetchone()
         return int(row["n"])
+
+    # --- personal voice profile ("sounds like me") ---------------------------
+
+    def set_voice_profile(self, user_id: int, samples: str) -> None:
+        with self._lock:
+            self._conn.execute(
+                "INSERT INTO voice_profiles(user_id, samples, updated_at) VALUES (?,?,?) "
+                "ON CONFLICT(user_id) DO UPDATE SET samples = excluded.samples, "
+                "updated_at = excluded.updated_at",
+                (user_id, samples or "", int(time.time())),
+            )
+            self._conn.commit()
+
+    def get_voice_profile(self, user_id: int) -> Optional[dict]:
+        row = self._conn.execute(
+            "SELECT samples, updated_at FROM voice_profiles WHERE user_id = ?", (user_id,)
+        ).fetchone()
+        if not row or not (row["samples"] or "").strip():
+            return None
+        return dict(row)
+
+    def clear_voice_profile(self, user_id: int) -> None:
+        with self._lock:
+            self._conn.execute("DELETE FROM voice_profiles WHERE user_id = ?", (user_id,))
+            self._conn.commit()
 
     # --- personal dictionary (per-user never-flag terms) ---------------------
 
