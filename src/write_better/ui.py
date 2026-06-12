@@ -145,13 +145,22 @@ const PRESETS = {
   convert: { format: 'email' },
 };
 
+// A `?service=NAME` query param preselects that service (deep-linked from the
+// landing page's service chips). Falls back to `clarify` when absent/unknown.
+function requestedService() {
+  try { return new URLSearchParams(location.search).get('service'); }
+  catch (e) { return null; }
+}
+
 async function init() {
   try {
     const info = await (await fetch('/', { headers: { Accept: 'application/json' } })).json();
     SAMPLES = info.samples || {};
+    const wanted = requestedService();
+    const preselect = info.services.includes(wanted) ? wanted : 'clarify';
     $('services').innerHTML = info.services.map(s =>
       `<label class="chip"><input type="checkbox" name="svc" value="${s}"`
-      + (s === 'clarify' ? ' checked' : '') + `>${s}</label>`).join('');
+      + (s === preselect ? ' checked' : '') + `>${s}</label>`).join('');
     $('format').innerHTML = info.formats.map(f =>
       `<option${f === 'markdown' ? ' selected' : ''}>${f}</option>`).join('');
   } catch (e) {

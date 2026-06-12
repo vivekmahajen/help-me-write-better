@@ -1,12 +1,18 @@
 """A tiny stdlib WSGI app exposing the Write Better engine over HTTP.
 
 Kept dependency-free (only the engine, which lazily imports the Anthropic SDK)
-so it deploys cleanly on Vercel's Python runtime. Routing is method-based and
-path-agnostic so it works behind a catch-all rewrite:
+so it deploys cleanly on Vercel's Python runtime. Routing keys off the method
+and, for browser GETs, a coarse path so it still works behind a catch-all
+rewrite:
 
-    GET   -> service info (available services + request shape)
-    POST  -> run the engine on a JSON body, return the polished text
-    OPTIONS -> CORS preflight
+    GET  /      (Accept: text/html) -> marketing landing page
+    GET  /app   (Accept: text/html) -> the demo editor (with ?service= preselect)
+    GET  /      (anything else)     -> service info (services + request shape)
+    POST        (any path)          -> run the engine, return the polished text
+    OPTIONS                         -> CORS preflight
+
+The JSON descriptor (``_info``) and ``POST`` behaviour are deliberately
+unchanged — content negotiation only ever *adds* the HTML branches.
 """
 
 from __future__ import annotations
@@ -14,6 +20,7 @@ from __future__ import annotations
 import json
 
 from .engine import Request, has_api_key, improve
+from .landing import LANDING
 from .modes import MODES, resolve_services
 from .prompt import VALID_FORMATS
 from .samples import SAMPLES
@@ -85,9 +92,12 @@ def app(environ, start_response):
         return [b""]
 
     if method == "GET":
-        # Browsers (Accept: text/html) get the UI; everyone else gets JSON.
+        # Browsers (Accept: text/html) get a page; everyone else gets JSON.
         if "text/html" in environ.get("HTTP_ACCEPT", ""):
-            return _html(start_response, "200 OK", PAGE)
+            # /app -> the demo editor; anything else -> the landing page.
+            route = (environ.get("PATH_INFO", "/") or "/").rstrip("/")
+            page = PAGE if route.endswith("/app") else LANDING
+            return _html(start_response, "200 OK", page)
         return _respond(start_response, "200 OK", _info())
 
     if method != "POST":
