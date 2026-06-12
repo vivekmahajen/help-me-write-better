@@ -1,0 +1,20 @@
+id: complaint
+name: Complaint letter
+category: everyday
+description: A firm, effective complaint that states the issue and the resolution you want.
+fields:
+  - { key: issue, label: "What went wrong", type: textarea, required: true }
+  - { key: product, label: "Product / service / order #", type: text, required: false }
+  - { key: resolution, label: "What outcome you want", type: text, required: true }
+  - { key: tone, label: "Tone", type: text, required: false, default: "firm but civil" }
+defaults: { service: write, format: plain }
+variants: 1
+prompt: |
+  Write a complaint letter about: {issue}.
+  {{#product}}Regarding: {product}.{{/product}}
+  Desired resolution: {resolution}.
+  Tone: {tone} — assertive and factual, never abusive. State the problem clearly
+  with any specifics the writer gave, explain the impact, and make a specific,
+  reasonable request with a timeframe. Do NOT invent order numbers, dates, names,
+  or policies not provided — use [bracketed placeholders]. End with a clear next
+  step if it isn't resolved.

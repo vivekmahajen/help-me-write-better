@@ -1,0 +1,21 @@
+id: recommendation
+name: Recommendation letter
+category: everyday
+description: A credible reference letter from the candidate's strengths and your relationship.
+fields:
+  - { key: candidate, label: "Person you're recommending", type: text, required: true }
+  - { key: purpose, label: "For what (job, school, etc.)", type: text, required: true }
+  - { key: strengths, label: "Strengths & examples to highlight", type: textarea, required: true }
+  - { key: relationship, label: "How you know them", type: text, required: false }
+  - { key: tone, label: "Tone", type: text, required: false, default: "professional and enthusiastic" }
+defaults: { service: write, format: plain, length: "around 300 words" }
+variants: 1
+prompt: |
+  Write a letter of recommendation for {candidate} for {purpose}.
+  Base it on these strengths and examples: {strengths}.
+  {{#relationship}}The recommender's relationship to the candidate: {relationship}.{{/relationship}}
+  Tone: {tone}. Open with how you know them and your endorsement, give two or
+  three specific evidence-backed strengths, and close with a strong, unqualified
+  recommendation and an offer to be contacted. Do NOT invent achievements,
+  metrics, titles, or dates not provided — use [bracketed placeholders] (e.g.,
+  [specific project]). Stay credible and concrete, not generic praise.
