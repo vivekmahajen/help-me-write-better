@@ -13,3 +13,9 @@
 - SDK: `client.scan()` / `client.getScan()`; OpenAPI documents `/v1/scan*`.
 - `docs/features/plagiarism.md`, `docs/decisions/ADR-001-plagiarism-vendor.md`,
   `.env.example`.
+- **Citation generator** (Feature 3): `POST /v1/cite` + `GET /v1/citations`.
+  Zero marginal cost, no key — DOI→Crossref, ISBN→OpenLibrary, URL→meta tags,
+  free-text→LLM/heuristic (flagged for verification). APA 7 / MLA 9 / Chicago
+  formatters over a CSL-JSON intermediate; per-line warnings (one bad input
+  doesn't fail the batch); optional save to a per-user bibliography. SDK:
+  `client.cite()` / `client.listCitations()`. `docs/features/citations.md`.

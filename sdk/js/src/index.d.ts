@@ -78,6 +78,18 @@ export interface ScanResponse {
   ai_detection?: AiDetectionResult;
 }
 
+export interface CiteItem {
+  input: string;
+  csl_json: Record<string, unknown>;
+  bibliography_entry?: string;
+  in_text?: string;
+  resolver: string;
+  parsed_by: string;
+  warnings: string[];
+}
+
+export interface CiteResponse { style: string; items: CiteItem[]; bibliography: string[]; }
+
 export interface AnalyticsSummary {
   calls: number;
   words: number;
@@ -170,6 +182,8 @@ export class WriteBetterClient {
   check(text: string, previous?: string): Promise<CheckResponse>;
   scan(text: string, modes?: ("plagiarism" | "ai_detection")[], minMatchPct?: number): Promise<ScanResponse>;
   getScan(scanId: string): Promise<ScanResponse>;
+  cite(inputs: string[], style?: "apa" | "mla" | "chicago", options?: Record<string, unknown>): Promise<CiteResponse>;
+  listCitations(): Promise<unknown[]>;
   getAccount(): Promise<Account>;
   getUsage(): Promise<UsageReport>;
   getAnalytics(windowDays?: number): Promise<AnalyticsResponse>;
