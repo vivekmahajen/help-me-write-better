@@ -333,8 +333,9 @@ def _cite(store, http, user, environ, start_response):
         for item in result["items"]:
             store.insert_citation(user["id"], item["csl_json"], result["style"], doc_id)
 
-    store.insert_usage(user["id"], "cite", "none", premium=False,
-                       input_tokens=0, output_tokens=0)
+    store.insert_usage(user["id"], "citation_generated", "none", premium=False,
+                       input_tokens=0, output_tokens=0,
+                       issue_types={it["resolver"]: 1 for it in result["items"]})
     return _json(start_response, "200 OK", result)
 
 
@@ -367,6 +368,10 @@ def _scan(store, vendor, user, environ, start_response):
             "error": str(exc), "code": "feature_unavailable",
             "retry_after": exc.retry_after}, extra=[("Retry-After", str(exc.retry_after))])
 
+    # Analytics event (feature adoption); the scan itself is metered via credits.
+    store.insert_usage(user["id"], "scan_completed", "vendor", premium=False,
+                       input_tokens=0, output_tokens=0, words=analytics.word_count(text),
+                       issue_types={k: 1 for k in result if k in ("plagiarism", "ai_detection")})
     return _json(start_response, "200 OK", result)
 
 
@@ -590,6 +595,10 @@ def _improve(store, engine, user, environ, start_response):
     if data.get("template"):
         body["template"] = data["template"]
         body["variants"] = outputs
+        # Analytics event: which template was used.
+        store.insert_usage(user["id"], "template_used", "none", premium=False,
+                           input_tokens=0, output_tokens=0,
+                           issue_types={data["template"]: 1})
     if warnings:
         body["warnings"] = warnings
     return _json(start_response, "200 OK", body)

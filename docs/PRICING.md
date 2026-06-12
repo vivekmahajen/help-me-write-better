@@ -80,3 +80,33 @@ Unit costs are current mid-2026 API estimates and fall over time. Update them in
 Behavior: 35% typical cap utilization · 10,000 free users · 3% free→paid
 conversion. Text writing/editing is treated as effectively free and unlimited
 (~$0.002/piece, folded into infrastructure).
+
+## Scan credits (plagiarism + AI detection)
+
+Plagiarism and AI-detection scans are the only features with real marginal cost
+(external vendor — see `docs/decisions/ADR-001-plagiarism-vendor.md`). They are
+metered as **scan credits**, separate from the model-generation caps:
+
+- 1 credit per **500 words** of plagiarism scan (`ceil(words/500)`); 1 credit per
+  AI-detection scan. A combined scan sums them.
+- Monthly included credits per tier (`scans.SCAN_CAPS`):
+
+  | Plan | Scan credits / month |
+  |---|---|
+  | Free | 0 |
+  | Starter | 20 |
+  | Pro | 100 |
+  | Business | 300 |
+
+- **Cached re-scans cost 0** — identical content (by `sha256(normalized_text)`)
+  returns the prior result and never re-bills.
+- Over the cap → `402 scan_cap_reached` **before** the vendor is called.
+
+At the ADR's vendor pricing (~$0.10–$0.20 / 1k words), one credit ≈ 500 words sits
+comfortably inside the per-tier subscription margins; heavy users buy credit packs
+(overage), which the `scans` metering already supports.
+
+Everything else added in the Trust/Template layers — citations, marketing
+templates, creative tools, the style fingerprint, real-time checks — has **no
+external marginal cost** and is not credit-metered (templates consume the normal
+model-generation cap; the rest are free/uncapped).

@@ -13,6 +13,12 @@
 - SDK: `client.scan()` / `client.getScan()`; OpenAPI documents `/v1/scan*`.
 - `docs/features/plagiarism.md`, `docs/decisions/ADR-001-plagiarism-vendor.md`,
   `.env.example`.
+- **Analytics events + public docs** (cross-cutting): named feature-adoption
+  events in the usage log — `scan_completed`, `citation_generated`,
+  `template_used` (with the template id) — so the analytics dashboard shows
+  Trust/Template-layer usage. Pricing page gains a scan-credits section;
+  `docs/comparison.md` records the 30-full / 1-partial matrix (rows flipped only
+  after acceptance).
 - **Creative / fiction tools** (Feature 5): 12 `category: creative` templates
   (premise, beat sheets, character voice, dialogue tightener, show-don't-tell,
   scene expander, synopsis, blurb, world-building, …). Long-form `context` on
