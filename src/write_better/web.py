@@ -27,6 +27,7 @@ from .modes import MODES, resolve_services
 from .prompt import VALID_FORMATS
 from .samples import SAMPLES
 from .ui import PAGE
+from . import seo
 
 _CORS = ("Access-Control-Allow-Origin", "*")
 
@@ -46,6 +47,16 @@ def _html(start_response, status: str, html: str):
     body = html.encode("utf-8")
     start_response(status, [
         ("Content-Type", "text/html; charset=utf-8"),
+        ("Content-Length", str(len(body))),
+        _CORS,
+    ])
+    return [body]
+
+
+def _bytes(start_response, status: str, text: str, content_type: str):
+    body = text.encode("utf-8")
+    start_response(status, [
+        ("Content-Type", content_type),
         ("Content-Length", str(len(body))),
         _CORS,
     ])
@@ -105,11 +116,18 @@ def app(environ, start_response):
         return [b""]
 
     if method == "GET":
+        route = (environ.get("PATH_INFO", "/") or "/").rstrip("/")
+        # SEO files — served regardless of Accept (crawlers vary).
+        if route.endswith("/robots.txt"):
+            return _bytes(start_response, "200 OK", seo.robots_txt(), "text/plain; charset=utf-8")
+        if route.endswith("/sitemap.xml"):
+            return _bytes(start_response, "200 OK", seo.sitemap_xml(), "application/xml; charset=utf-8")
+        if route.endswith("/og.svg"):
+            return _bytes(start_response, "200 OK", seo.OG_SVG, "image/svg+xml; charset=utf-8")
         # Browsers (Accept: text/html) get a page; everyone else gets JSON.
         if "text/html" in environ.get("HTTP_ACCEPT", ""):
             # /app -> the demo editor; anything else -> the landing page,
             # rendered fresh so the FEATURES_LIVE honesty gate reflects config.
-            route = (environ.get("PATH_INFO", "/") or "/").rstrip("/")
             page = PAGE if route.endswith("/app") else landing.render()
             return _html(start_response, "200 OK", page)
         return _respond(start_response, "200 OK", _info())

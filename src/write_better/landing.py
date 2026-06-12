@@ -20,6 +20,7 @@ arrive in later slices (PR-3, PR-4).
 
 from __future__ import annotations
 
+from . import seo
 from .demo import DEMO_INPUT
 from .features import FEATURES_LIVE, surface_states
 
@@ -102,6 +103,7 @@ def render(flags: dict | None = None) -> str:
     """Render the landing page for a given feature-flag state."""
     f = FEATURES_LIVE if flags is None else flags
     html = _TEMPLATE
+    html = html.replace("__SEO_HEAD__", seo.head())
     html = html.replace("__TESTS__", str(TEST_COUNT))
     html = html.replace("__SERVICES__", str(SERVICE_COUNT))
     html = html.replace("__DEMO_INPUT__", _esc(DEMO_INPUT))
@@ -121,8 +123,7 @@ _TEMPLATE = """<!doctype html>
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Help Me Write Better — clear writing, with an API behind it</title>
-<meta name="description" content="Improve and format text with Claude while keeping your meaning and voice. A live editor, an open JSON API, and composable services.">
+__SEO_HEAD__
 <style>
   :root{
     --ink:#0E2A47; --teal:#0E7C7B; --mint:#1FA37A;
