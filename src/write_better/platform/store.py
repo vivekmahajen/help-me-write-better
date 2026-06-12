@@ -153,6 +153,16 @@ CREATE TABLE IF NOT EXISTS password_resets (
 );
 CREATE INDEX IF NOT EXISTS ix_password_resets_user ON password_resets(user_id);
 
+-- First-party product analytics for the public landing/pricing pages. Anonymous
+-- by design: event name + small JSON props + timestamp only, no user, no PII.
+CREATE TABLE IF NOT EXISTS analytics_events (
+    id    INTEGER PRIMARY KEY AUTOINCREMENT,
+    ts    INTEGER NOT NULL,
+    event TEXT NOT NULL,
+    props TEXT NOT NULL DEFAULT '{}'
+);
+CREATE INDEX IF NOT EXISTS ix_analytics_events_ts ON analytics_events(ts, event);
+
 -- Saved citations ("My bibliography"). Stores CSL-JSON only — no external cost.
 CREATE TABLE IF NOT EXISTS citations (
     id         INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -714,6 +724,24 @@ class Store:
             (user_id, since_ts),
         ).fetchone()
         return int(row["n"])
+
+    # --- analytics events (anonymous, first-party) ---------------------------
+
+    def insert_analytics_event(self, event: str, props: Optional[dict] = None,
+                               ts: Optional[int] = None) -> None:
+        with self._lock:
+            self._conn.execute(
+                "INSERT INTO analytics_events(ts, event, props) VALUES (?,?,?)",
+                (ts or int(time.time()), event, json.dumps(props or {})),
+            )
+            self._conn.commit()
+
+    def analytics_event_counts(self, since_ts: int) -> dict:
+        rows = self._conn.execute(
+            "SELECT event, COUNT(*) AS n FROM analytics_events WHERE ts >= ? GROUP BY event",
+            (since_ts,),
+        ).fetchall()
+        return {r["event"]: int(r["n"]) for r in rows}
 
     # --- citations -----------------------------------------------------------
 

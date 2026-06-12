@@ -135,6 +135,12 @@ def app(environ, start_response):
     if method != "POST":
         return _respond(start_response, "405 Method Not Allowed", {"error": "use GET or POST"})
 
+    # Analytics sink: with no platform/DB here, accept-and-drop so the page's
+    # best-effort events never error (the platform app records them when mounted).
+    if (environ.get("PATH_INFO", "/") or "/").rstrip("/").endswith("/events"):
+        start_response("204 No Content", [("Content-Length", "0"), _CORS])
+        return [b""]
+
     # --- POST: run the engine ---
     try:
         length = int(environ.get("CONTENT_LENGTH") or 0)

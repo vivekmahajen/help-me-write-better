@@ -103,6 +103,19 @@ def test_landing_has_seo_metadata():
     assert b'application/ld+json' in data
 
 
+def test_landing_emits_analytics_events():
+    cap, data = _call("GET", accept="text/html", path="/")
+    assert b"landing_view" in data and b"/events" in data
+    assert b"cta_click" in data
+
+
+def test_events_post_is_accepted_and_dropped_in_engine_mode():
+    # No platform/DB here -> 204 accept-and-drop, never an engine call.
+    cap, data = _call("POST", {"event": "landing_view"}, path="/events")
+    assert cap.status.startswith("204")
+    assert data == b""
+
+
 def test_curl_get_still_returns_json():
     # No HTML in Accept -> JSON info, not a page.
     cap, data = _call("GET", accept="*/*")

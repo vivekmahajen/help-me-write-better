@@ -112,12 +112,21 @@ _TEMPLATE = """<!doctype html>
 <script>
 (function(){
   var msg=document.getElementById('msg');
+  function track(ev, props){
+    try{
+      var body=JSON.stringify({event:ev, props:props||{}});
+      if(navigator.sendBeacon){ navigator.sendBeacon('/events', new Blob([body],{type:'application/json'})); }
+      else { fetch('/events',{method:'POST',headers:{'Content-Type':'application/json'},body:body,keepalive:true}); }
+    }catch(e){}
+  }
+  track('pricing_view',{});
   // Must be signed in to choose a plan.
   fetch('/auth/me').then(function(r){ if(r.status===401) location.href='/auth/login'; });
 
   document.querySelectorAll('.pick').forEach(function(btn){
     btn.addEventListener('click', async function(){
       var plan=btn.dataset.plan;
+      track('plan_selected', {plan: plan});
       document.querySelectorAll('.pick').forEach(function(b){ b.disabled=true; });
       msg.textContent='Setting up your account…'; msg.className='msg';
       try{

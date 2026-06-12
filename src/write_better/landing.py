@@ -339,6 +339,21 @@ __SEO_HEAD__
 
 <script>
 (function(){
+  // First-party analytics — best-effort, no third-party trackers.
+  function track(ev, props){
+    try{
+      var body=JSON.stringify({event:ev, props:props||{}});
+      if(navigator.sendBeacon){ navigator.sendBeacon('/events', new Blob([body],{type:'application/json'})); }
+      else { fetch('/events',{method:'POST',headers:{'Content-Type':'application/json'},body:body,keepalive:true}); }
+    }catch(e){}
+  }
+  window.__track=track;
+  track('landing_view',{});
+  document.querySelectorAll('[data-cta]').forEach(function(el){
+    el.addEventListener('click', function(){ track('cta_click', {target: el.getAttribute('data-cta')||''}); });
+  });
+})();
+(function(){
   var $=function(id){return document.getElementById(id);};
   var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   var esc=function(s){return String(s).replace(/[&<>]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;'}[c];});};
@@ -379,6 +394,7 @@ __SEO_HEAD__
         show(d.input || text, d.text, d.fallback, REASONS[d.reason]);
         $('demoStatus').textContent = d.fallback
           ? 'Sample result.' : (d.model+' · '+(d.services||[]).join(' + '));
+        if(window.__track) window.__track(d.fallback?'demo_fallback':'demo_run',{});
       })
       .catch(function(){
         show(text, text, true, 'Could not reach the demo — showing your text unchanged.');
