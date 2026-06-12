@@ -17,9 +17,16 @@ PAGE = """<!doctype html>
   * { box-sizing: border-box; }
   body { margin:0; background:var(--bg); color:var(--ink);
          font:15px/1.5 system-ui,-apple-system,Segoe UI,Roboto,sans-serif; }
-  header { padding:20px 24px; border-bottom:1px solid var(--line); }
+  header { padding:20px 24px; border-bottom:1px solid var(--line);
+           display:flex; align-items:center; justify-content:space-between; gap:16px; }
   header h1 { margin:0; font-size:20px; }
   header p { margin:4px 0 0; color:var(--muted); font-size:13px; }
+  .account { display:flex; align-items:center; gap:12px; font-size:13px; white-space:nowrap; }
+  .account .who { color:var(--muted); }
+  .account a { color:var(--accent); text-decoration:none; }
+  .account button { width:auto; padding:7px 12px; font-size:13px; background:transparent;
+          color:var(--accent); border:1px solid var(--line); font-weight:500;
+          border-radius:8px; cursor:pointer; }
   main { max-width:980px; margin:0 auto; padding:24px;
          display:grid; grid-template-columns:1fr 1fr; gap:20px; }
   @media (max-width:820px){ main { grid-template-columns:1fr; } }
@@ -67,8 +74,15 @@ PAGE = """<!doctype html>
 </head>
 <body>
 <header>
-  <h1>Help Me Write Better</h1>
-  <p>Improve and format text with Claude — preserving meaning and voice.</p>
+  <div>
+    <h1>Help Me Write Better</h1>
+    <p>Improve and format text with Claude — preserving meaning and voice.</p>
+  </div>
+  <div id="account" class="account" hidden>
+    <span class="who" id="who"></span>
+    <a href="/account">Account</a>
+    <button id="logout" type="button">Log out</button>
+  </div>
 </header>
 <main>
   <section class="panel">
@@ -334,8 +348,27 @@ $('apply').addEventListener('click', () => {
   if (lastRedacted) { $('text').value = lastRedacted; $('apply').hidden = true; }
 });
 $('copy').addEventListener('click', () => navigator.clipboard.writeText($('out').textContent));
+
+// Show an account/log-out control when this deploy has accounts and we're signed
+// in (GET /auth/me). On the keyless engine-only deploy this 404s and stays hidden.
+async function checkAccount() {
+  try {
+    const res = await fetch('/auth/me', { headers: { Accept: 'application/json' } });
+    if (!res.ok) return;
+    const data = await res.json();
+    if (!data.user) return;
+    $('who').textContent = data.user.email;
+    $('account').hidden = false;
+  } catch (e) { /* no accounts on this deployment */ }
+}
+$('logout').addEventListener('click', async () => {
+  try { await fetch('/auth/logout', { method: 'POST' }); } catch (e) {}
+  location.href = '/auth/login';
+});
+
 setupMic();
 init();
+checkAccount();
 </script>
 </body>
 </html>
