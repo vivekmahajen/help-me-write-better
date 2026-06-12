@@ -31,7 +31,7 @@ jobs:
       - name: node --test (every package)
         run: |
           set -e
-          for d in sdk/js extension addins/word addins/google-docs clients/desktop clients/mobile; do
+          for d in sdk/js extension addins/word addins/google-docs clients/desktop clients/mobile web/tools; do
             echo "::group::$d"
             (cd "$d" && node --test)
             echo "::endgroup::"

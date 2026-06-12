@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Help Me Write Better — Pro Tools</title>
+<style>
+  :root{--bg:#0f1221;--panel:#171b2e;--ink:#e8eaf2;--muted:#9aa3b8;--accent:#6ea8fe;--line:#283049;--ok:#3fb37f;--warn:#f0c14b;--err:#e06c75}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
+  header{padding:18px 24px;border-bottom:1px solid var(--line);display:flex;gap:16px;align-items:center;flex-wrap:wrap}
+  header h1{font-size:18px;margin:0;flex:1}
+  header input{background:#0c0f1c;color:var(--ink);border:1px solid var(--line);border-radius:8px;padding:7px 10px}
+  main{max-width:960px;margin:0 auto;padding:24px;display:grid;gap:20px}
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:16px}
+  .panel h2{margin:0 0 10px;font-size:15px}
+  textarea,select,input[type=text]{width:100%;background:#0c0f1c;color:var(--ink);border:1px solid var(--line);border-radius:8px;padding:9px;font:inherit}
+  textarea{min-height:90px;resize:vertical}
+  .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:10px}
+  button{padding:8px 14px;border:0;border-radius:8px;background:var(--accent);color:#0a0e1a;font-weight:600;cursor:pointer}
+  label{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
+  .out{margin-top:12px}
+  .muted{color:var(--muted);font-size:13px}
+  .dial{font-size:30px;font-weight:700}
+  .src{display:flex;gap:8px;padding:6px 0;border-top:1px solid var(--line)}
+  .src a{color:var(--accent);text-decoration:none;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .gauge{display:flex;gap:4px;margin:8px 0}
+  .gauge span{flex:1;text-align:center;padding:5px;border-radius:6px;background:#0c0f1c;border:1px solid var(--line);font-size:12px}
+  .gauge .on.human{background:#1f4d33;color:#8ff0b4}.gauge .on.uncertain{background:#4a3b16;color:#ffd98a}.gauge .on.likely_ai{background:#4d1f24;color:#ff9ea6}
+  .note{color:var(--warn);font-size:13px;margin-top:6px}
+  .disclaimer{color:var(--muted);font-size:12px;margin-top:8px;font-style:italic}
+  table{width:100%;border-collapse:collapse;font-size:14px}
+  td{padding:5px 0;border-top:1px solid var(--line)}td:first-child{color:var(--muted)}
+  .cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:8px}
+  .card{background:#0c0f1c;border:1px solid var(--line);border-radius:8px;padding:10px;cursor:pointer}
+  .card.sel{border-color:var(--accent)}
+  .card b{display:block;font-size:13px}.card span{color:var(--muted);font-size:12px}
+  .err{color:var(--err)}
+  pre{white-space:pre-wrap;background:#0c0f1c;border:1px solid var(--line);border-radius:8px;padding:10px;margin:6px 0}
+</style>
+</head>
+<body>
+<header>
+  <h1>Help Me Write Better — Pro Tools</h1>
+  <input id="baseUrl" type="text" placeholder="API base URL" size="26">
+  <input id="apiKey" type="password" placeholder="API key (wbk_…)" size="22">
+</header>
+<main>
+  <section class="panel">
+    <h2>Plagiarism &amp; AI detection</h2>
+    <textarea id="scanText" placeholder="Paste text to scan…"></textarea>
+    <div class="row">
+      <label><input type="checkbox" id="mPlag" checked> plagiarism</label>
+      <label><input type="checkbox" id="mAi" checked> AI detection</label>
+      <button id="scanBtn">Scan</button>
+    </div>
+    <div class="out" id="scanOut"></div>
+  </section>
+
+  <section class="panel">
+    <h2>Citations</h2>
+    <textarea id="citeInputs" placeholder="One per line: DOIs, URLs, ISBNs, or free-text refs"></textarea>
+    <div class="row">
+      <select id="citeStyle"><option value="apa">APA</option><option value="mla">MLA</option><option value="chicago">Chicago</option></select>
+      <button id="citeBtn">Format</button>
+    </div>
+    <div class="out" id="citeOut"></div>
+  </section>
+
+  <section class="panel">
+    <h2>Templates</h2>
+    <div class="cards" id="tplCards"></div>
+    <div id="tplForm" class="out"></div>
+    <div class="out" id="tplOut"></div>
+  </section>
+
+  <section class="panel">
+    <h2>Style fingerprint</h2>
+    <textarea id="fpText" placeholder="Paste prose for craft metrics…"></textarea>
+    <div class="row"><button id="fpBtn">Analyze</button></div>
+    <div class="out" id="fpOut"></div>
+  </section>
+</main>
+<script type="module" src="app.js"></script>
+</body>
+</html>
