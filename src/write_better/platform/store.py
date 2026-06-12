@@ -138,6 +138,17 @@ CREATE TABLE IF NOT EXISTS scans (
 CREATE UNIQUE INDEX IF NOT EXISTS scans_cache ON scans(kind, content_hash)
     WHERE status = 'complete';
 CREATE INDEX IF NOT EXISTS ix_scans_user ON scans(user_id);
+
+-- Saved citations ("My bibliography"). Stores CSL-JSON only — no external cost.
+CREATE TABLE IF NOT EXISTS citations (
+    id         INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id    INTEGER NOT NULL REFERENCES users(id),
+    doc_id     INTEGER REFERENCES documents(id),
+    csl_json   TEXT NOT NULL,
+    style      TEXT,
+    created_at INTEGER NOT NULL
+);
+CREATE INDEX IF NOT EXISTS ix_citations_user ON citations(user_id);
 """
 
 # Columns added after the initial release; applied as idempotent migrations.
@@ -643,6 +654,39 @@ class Store:
             (user_id, since_ts),
         ).fetchone()
         return int(row["n"])
+
+    # --- citations -----------------------------------------------------------
+
+    def insert_citation(self, user_id: int, csl_json: dict, style: str,
+                        doc_id: Optional[int] = None) -> dict:
+        with self._lock:
+            cur = self._conn.execute(
+                "INSERT INTO citations(user_id, doc_id, csl_json, style, created_at) "
+                "VALUES (?,?,?,?,?)",
+                (user_id, doc_id, json.dumps(csl_json), style, int(time.time())),
+            )
+            self._conn.commit()
+            return self._row("citations", cur.lastrowid)
+
+    def list_citations(self, user_id: int, doc_id: Optional[int] = None) -> list[dict]:
+        if doc_id is None:
+            rows = self._conn.execute(
+                "SELECT * FROM citations WHERE user_id = ? ORDER BY id DESC", (user_id,)
+            ).fetchall()
+        else:
+            rows = self._conn.execute(
+                "SELECT * FROM citations WHERE user_id = ? AND doc_id = ? ORDER BY id DESC",
+                (user_id, doc_id),
+            ).fetchall()
+        out = []
+        for r in rows:
+            d = dict(r)
+            try:
+                d["csl_json"] = json.loads(d["csl_json"])
+            except (ValueError, TypeError):
+                pass
+            out.append(d)
+        return out
 
     # --- internal ------------------------------------------------------------
 

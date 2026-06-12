@@ -57,6 +57,12 @@ export class WriteBetterClient {
   }
   getScan(scanId) { return this._request("GET", `/v1/scans/${scanId}`); }
 
+  // --- citations ---
+  cite(inputs, style = "apa", options = {}) {
+    return this._request("POST", "/v1/cite", { cite: { inputs, style, ...options } });
+  }
+  listCitations() { return this._request("GET", "/v1/citations").then((r) => r.citations); }
+
   // --- account / usage / history / preferences ---
   getAccount() { return this._request("GET", "/v1/account"); }
   getUsage() { return this._request("GET", "/v1/usage"); }

@@ -192,6 +192,24 @@ def spec() -> dict:
                                   "401": _err("Unauthorized"), "404": _err("No such scan")},
                 }
             },
+            "/v1/cite": {
+                "post": {
+                    "operationId": "cite",
+                    "summary": "Generate/format citations (DOI/ISBN/URL/free-text)",
+                    "requestBody": _json_body("CiteRequest"),
+                    "responses": {"200": _json_resp("Citations", "CiteResponse"),
+                                  "400": _err("Invalid request"),
+                                  "401": _err("Unauthorized")},
+                }
+            },
+            "/v1/citations": {
+                "get": {
+                    "operationId": "listCitations",
+                    "summary": "Your saved bibliography",
+                    "responses": {"200": _json_resp("Citations", "SavedCitations"),
+                                  "401": _err("Unauthorized")},
+                }
+            },
             "/v1/documents": {
                 "get": {
                     "operationId": "listDocuments",
@@ -549,6 +567,49 @@ def _schemas() -> dict:
                 "plagiarism": {"type": "object"},
                 "ai_detection": {"type": "object"},
             },
+        },
+        "CiteRequest": {
+            "type": "object",
+            "properties": {
+                "cite": {
+                    "type": "object",
+                    "properties": {
+                        "inputs": {"type": "array", "items": {"type": "string"},
+                                   "description": "DOIs, ISBNs, URLs, or free-text refs"},
+                        "style": {"type": "string", "enum": ["apa", "mla", "chicago"]},
+                        "output": {"type": "array",
+                                   "items": {"type": "string",
+                                             "enum": ["bibliography", "in_text"]}},
+                        "save": {"type": "boolean"},
+                        "doc_id": {"type": "integer"},
+                    },
+                    "required": ["inputs"],
+                },
+            },
+        },
+        "CiteItem": {
+            "type": "object",
+            "properties": {
+                "input": {"type": "string"},
+                "csl_json": {"type": "object"},
+                "bibliography_entry": {"type": "string"},
+                "in_text": {"type": "string"},
+                "resolver": {"type": "string"},
+                "parsed_by": {"type": "string"},
+                "warnings": {"type": "array", "items": {"type": "string"}},
+            },
+        },
+        "CiteResponse": {
+            "type": "object",
+            "properties": {
+                "style": {"type": "string"},
+                "items": {"type": "array", "items": _ref("CiteItem")},
+                "bibliography": {"type": "array", "items": {"type": "string"}},
+            },
+        },
+        "SavedCitations": {
+            "type": "object",
+            "properties": {"citations": {"type": "array", "items": {"type": "object"}}},
         },
     }
 

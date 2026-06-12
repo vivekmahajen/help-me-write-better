@@ -21,6 +21,7 @@ import time
 from collections import Counter
 from urllib.parse import parse_qs
 
+from ..citation import cite_batch, default_http
 from ..engine import Request, improve as engine_improve
 from ..modes import resolve_services
 from ..prompt import VALID_FORMATS
@@ -79,11 +80,13 @@ def _read_json(environ) -> tuple[dict | None, str | None]:
     return data, None
 
 
-def make_gateway(store: Store, engine=engine_improve, vendor="env"):
+def make_gateway(store: Store, engine=engine_improve, vendor="env",
+                 citation_http=default_http):
     """Build the gateway WSGI app over ``store``.
 
-    ``engine`` and ``vendor`` (the plagiarism/AI scan provider) are injectable for
-    tests; ``vendor="env"`` resolves it from ``ORIGINALITY_API_KEY`` (None if unset).
+    ``engine``, ``vendor`` (plagiarism/AI scan provider), and ``citation_http``
+    (HTTP fetch for citation resolvers) are injectable for tests; ``vendor="env"``
+    resolves it from ``ORIGINALITY_API_KEY`` (None if unset).
     """
     if vendor == "env":
         vendor = vendor_from_env()
@@ -120,6 +123,8 @@ def make_gateway(store: Store, engine=engine_improve, vendor="env"):
                     "POST /v1/check": "real-time inline check (local, uncapped)",
                     "POST /v1/scan": "plagiarism / AI-detection scan (external, metered)",
                     "GET /v1/scans/{id}": "fetch a scan result",
+                    "POST /v1/cite": "generate/format citations (DOI/ISBN/URL/free-text)",
+                    "GET /v1/citations": "your saved bibliography",
                     "GET /v1/openapi.json": "the OpenAPI 3.1 contract",
                     "GET /v1/docs": "human-readable API docs",
                 },
@@ -174,6 +179,13 @@ def make_gateway(store: Store, engine=engine_improve, vendor="env"):
             if result is None:
                 return _json(start_response, "404 Not Found", {"error": "no such scan"})
             return _json(start_response, "200 OK", result)
+
+        if rest == ["cite"] and method == "POST":
+            return _cite(store, citation_http, user, environ, start_response)
+
+        if rest == ["citations"] and method == "GET":
+            return _json(start_response, "200 OK",
+                         {"citations": store.list_citations(user["id"])})
 
         if rest == ["analytics"] and method == "GET":
             qs = parse_qs(environ.get("QUERY_STRING", ""))
@@ -281,6 +293,30 @@ def _org_view(store, org, user_id):
         "role": member["role"] if member else None,
         "members": store.list_org_members(org["id"]),
     }
+
+
+def _cite(store, http, user, environ, start_response):
+    """Citation generator/formatter (Feature 3). Free; no external key needed."""
+    data, err = _read_json(environ)
+    if err:
+        return _json(start_response, "400 Bad Request", {"error": err})
+    opts = data.get("cite") if isinstance(data.get("cite"), dict) else data
+    inputs = opts.get("inputs")
+    if not isinstance(inputs, list) or not inputs:
+        return _json(start_response, "400 Bad Request",
+                     {"error": "'cite.inputs' (non-empty array) is required"})
+    style = opts.get("style", "apa")
+    output = opts.get("output") or ["bibliography", "in_text"]
+    result = cite_batch(inputs, style, http, output=tuple(output))
+
+    if opts.get("save"):
+        doc_id = opts.get("doc_id")
+        for item in result["items"]:
+            store.insert_citation(user["id"], item["csl_json"], result["style"], doc_id)
+
+    store.insert_usage(user["id"], "cite", "none", premium=False,
+                       input_tokens=0, output_tokens=0)
+    return _json(start_response, "200 OK", result)
 
 
 def _scan(store, vendor, user, environ, start_response):
