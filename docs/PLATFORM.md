@@ -103,7 +103,26 @@ Per the build order, **not** in this slice:
 
 ## Deploy note
 
-The gateway needs a **persistent database**. SQLite-on-local works for dev/tests;
+**Production database (PostgreSQL).** Point `WB_DB_URL` (or `DATABASE_URL`) at a
+`postgres://…` URL and the gateway uses Postgres instead of SQLite — same `Store`
+DAO, dialect handled in `platform/db.py`. Install the driver:
+
+```bash
+pip install 'help-me-write-better[postgres]'
+export WB_DB_URL=postgresql://user:pass@host:5432/dbname
+# serve write_better.platform.wsgi:app  (e.g. gunicorn / a long-running host)
+```
+
+Tables auto-create on first connect (the schema + idempotent migrations run for
+both backends). SQLite (file / `:memory:`) remains the default for dev and tests.
+
+> The Postgres dialect (placeholders, `BIGSERIAL`, `ON CONFLICT`, `RETURNING id`,
+> `information_schema` introspection) is unit-tested in `tests/test_db.py`; run it
+> against a real Postgres once to verify end-to-end, e.g.
+> `docker run -e POSTGRES_PASSWORD=x -p 5432:5432 postgres:16` then
+> `WB_DB_URL=postgresql://postgres:x@localhost/postgres bash scripts/smoke.sh`.
+
+The gateway still needs a persistent database overall. SQLite-on-local works for dev/tests;
 serverless filesystems (Vercel) are ephemeral, so production needs a managed
 Postgres (the `Store` DAO surface is small enough to swap). The Vercel entrypoint
 (`app.py`) still serves the existing demo; point a DB-backed deployment at

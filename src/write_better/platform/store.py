@@ -18,6 +18,8 @@ import threading
 import time
 from typing import Any, Optional
 
+from .db import open_connection
+
 _SCHEMA = """
 CREATE TABLE IF NOT EXISTS users (
     id            INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -165,9 +167,11 @@ class Store:
 
     def __init__(self, path: str = ":memory:"):
         self.path = path
-        self._conn = sqlite3.connect(path, check_same_thread=False)
-        self._conn.row_factory = sqlite3.Row
-        self._conn.execute("PRAGMA foreign_keys = ON")
+        # SQLite (file/:memory:) returns a native sqlite3 connection; a postgres://
+        # URL returns a sqlite3-compatible shim (see db.open_connection).
+        self._conn = open_connection(path)
+        self._conn.row_factory = sqlite3.Row          # ignored by the PG shim
+        self._conn.execute("PRAGMA foreign_keys = ON")  # no-op on PG
         self._lock = threading.Lock()
         with self._lock:
             self._conn.executescript(_SCHEMA)
