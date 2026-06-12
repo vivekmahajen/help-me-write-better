@@ -141,6 +141,18 @@ CREATE UNIQUE INDEX IF NOT EXISTS scans_cache ON scans(kind, content_hash)
     WHERE status = 'complete';
 CREATE INDEX IF NOT EXISTS ix_scans_user ON scans(user_id);
 
+-- Password-reset tokens (email flow). Only a hash of the token is stored; the
+-- row is single-use and expires.
+CREATE TABLE IF NOT EXISTS password_resets (
+    id         INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id    INTEGER NOT NULL REFERENCES users(id),
+    token_hash TEXT UNIQUE NOT NULL,
+    created_at INTEGER NOT NULL,
+    expires_at INTEGER NOT NULL,
+    used_at    INTEGER
+);
+CREATE INDEX IF NOT EXISTS ix_password_resets_user ON password_resets(user_id);
+
 -- Saved citations ("My bibliography"). Stores CSL-JSON only — no external cost.
 CREATE TABLE IF NOT EXISTS citations (
     id         INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -215,6 +227,50 @@ class Store:
     def set_plan(self, user_id: int, plan: str) -> None:
         with self._lock:
             self._conn.execute("UPDATE users SET plan = ? WHERE id = ?", (plan, user_id))
+            self._conn.commit()
+
+    def set_password_hash(self, user_id: int, password_hash: str) -> None:
+        with self._lock:
+            self._conn.execute(
+                "UPDATE users SET password_hash = ? WHERE id = ?", (password_hash, user_id)
+            )
+            self._conn.commit()
+
+    # --- password resets -----------------------------------------------------
+
+    def insert_password_reset(self, user_id: int, token_hash: str,
+                              ttl_seconds: int) -> dict:
+        now = int(time.time())
+        with self._lock:
+            cur = self._conn.execute(
+                "INSERT INTO password_resets(user_id, token_hash, created_at, expires_at) "
+                "VALUES (?,?,?,?)",
+                (user_id, token_hash, now, now + ttl_seconds),
+            )
+            self._conn.commit()
+            return self._row("password_resets", cur.lastrowid)
+
+    def get_password_reset(self, token_hash: str) -> Optional[dict]:
+        """A live (unused, unexpired) reset row for this token hash, or None."""
+        row = self._conn.execute(
+            "SELECT * FROM password_resets "
+            "WHERE token_hash = ? AND used_at IS NULL AND expires_at > ?",
+            (token_hash, int(time.time())),
+        ).fetchone()
+        return dict(row) if row else None
+
+    def use_password_reset(self, reset_id: int) -> None:
+        with self._lock:
+            self._conn.execute(
+                "UPDATE password_resets SET used_at = ? WHERE id = ?",
+                (int(time.time()), reset_id),
+            )
+            self._conn.commit()
+
+    def delete_user_sessions(self, user_id: int) -> None:
+        """Invalidate all of a user's sessions (e.g. after a password reset)."""
+        with self._lock:
+            self._conn.execute("DELETE FROM sessions WHERE user_id = ?", (user_id,))
             self._conn.commit()
 
     # --- api keys ------------------------------------------------------------

@@ -129,6 +129,30 @@ def test_post_without_api_key_is_503(monkeypatch):
     assert cap.status.startswith("503")
 
 
+def test_demo_route_without_key_returns_sample(monkeypatch):
+    monkeypatch.setattr(web, "has_api_key", lambda: False)
+    cap, data = _call("POST", {"text": "their going too the store"}, path="/demo")
+    assert cap.status == "200 OK"            # demo never errors out
+    payload = json.loads(data)
+    assert payload["fallback"] is True
+    assert payload["model"] == "sample"
+
+
+def test_demo_route_success_uses_engine(monkeypatch):
+    from write_better.engine import Result
+    monkeypatch.setattr(web, "has_api_key", lambda: True)
+    monkeypatch.setattr(web, "improve", lambda req: Result(
+        text="FIXED", model="claude-haiku-4-5",
+        services=resolve_services("correct,tighten"), input_tokens=5, output_tokens=4))
+    # fresh limiter so the assertion isn't affected by other tests
+    monkeypatch.setattr(web, "_DEMO_LIMITER", web.RateLimiter(limit=5))
+    cap, data = _call("POST", {"text": "their going too the store"}, path="/demo")
+    payload = json.loads(data)
+    assert payload["fallback"] is False
+    assert payload["text"] == "FIXED"
+    assert payload["services"] == ["correct", "tighten"]
+
+
 def test_post_success_invokes_engine(monkeypatch):
     captured = {}
 

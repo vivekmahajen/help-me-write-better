@@ -13,11 +13,13 @@ import hmac
 import secrets
 from typing import Optional
 
+from ..plans import is_admin
 from .store import Store
 
 _PBKDF2_ITERATIONS = 120_000
 _KEY_PREFIX = "wbk_"
 _SESSION_TTL_SECONDS = 30 * 24 * 3600  # 30 days
+_RESET_TTL_SECONDS = 3600              # password-reset link valid for 1 hour
 
 
 # --- passwords ----------------------------------------------------------------
@@ -48,6 +50,10 @@ def verify_password(password: str, encoded: Optional[str]) -> bool:
 def create_user(store: Store, email: str, password: str, plan: str = "free") -> dict:
     if store.get_user_by_email(email):
         raise ValueError(f"a user with email {email!r} already exists")
+    # Owner/admin accounts start on the top tier for a complete UI; their caps
+    # are lifted entirely at enforcement time regardless of the stored plan.
+    if plan == "free" and is_admin(email):
+        plan = "business"
     return store.insert_user(email, hash_password(password), plan)
 
 
@@ -56,6 +62,43 @@ def verify_login(store: Store, email: str, password: str) -> Optional[dict]:
     if user and verify_password(password, user.get("password_hash")):
         return user
     return None
+
+
+# --- password reset (email flow) ---------------------------------------------
+
+def create_password_reset(store: Store, email: str) -> tuple[Optional[str], Optional[dict]]:
+    """Issue a single-use reset token for ``email`` if such a user exists.
+
+    Returns ``(token, user)`` or ``(None, None)`` when there's no such user. The
+    caller emails the token and ALWAYS responds the same way, so the endpoint
+    never reveals whether an address is registered.
+    """
+    user = store.get_user_by_email(email)
+    if not user:
+        return None, None
+    token = secrets.token_hex(24)
+    store.insert_password_reset(user["id"], _hash_key(token), _RESET_TTL_SECONDS)
+    return token, user
+
+
+def reset_password(store: Store, token: Optional[str], new_password: str) -> Optional[dict]:
+    """Consume a reset token and set a new password.
+
+    Returns the user on success, or None if the token is missing/expired/used.
+    Raises ``ValueError`` if the new password fails policy (too short) — the
+    token is left unconsumed so the user can retry. Existing sessions are
+    invalidated on success.
+    """
+    if not token:
+        return None
+    record = store.get_password_reset(_hash_key(token))
+    if not record:
+        return None
+    encoded = hash_password(new_password)        # validates length; may raise ValueError
+    store.set_password_hash(record["user_id"], encoded)
+    store.use_password_reset(record["id"])
+    store.delete_user_sessions(record["user_id"])
+    return store.get_user(record["user_id"])
 
 
 # --- api keys -----------------------------------------------------------------

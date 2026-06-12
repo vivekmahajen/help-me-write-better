@@ -8,6 +8,8 @@ Endpoints:
   POST /auth/signup   {email, password}     -> set session cookie
   POST /auth/login    {email, password}     -> set session cookie
   POST /auth/logout                          -> clear session
+  POST /auth/forgot   {email}                -> always 200; emails a reset link
+  POST /auth/reset    {token, password}      -> set new password, sign in
   GET  /auth/me                              -> current user
   GET  /auth/oauth/{provider}/start          -> 302 to provider consent
   GET  /auth/oauth/{provider}/callback?code&state -> set session, 302 home
@@ -19,7 +21,9 @@ import json
 import secrets
 from http.cookies import SimpleCookie
 
+from ..plans import is_admin
 from . import accounts
+from .mailer import ConsoleMailer, Email
 
 SESSION_COOKIE = "wb_session"
 STATE_COOKIE = "wb_oauth_state"
@@ -69,12 +73,14 @@ def _set_cookie(name, value, *, secure, max_age=None, http_only=True):
 
 
 def _public(user):
-    return {"id": user["id"], "email": user["email"], "plan": user["plan"]}
+    return {"id": user["id"], "email": user["email"], "plan": user["plan"],
+            "admin": is_admin(user["email"])}
 
 
-def make_webauth(store, oauth_providers=None, base_url="http://localhost"):
+def make_webauth(store, oauth_providers=None, base_url="http://localhost", mailer=None):
     providers = oauth_providers or {}
     secure = base_url.startswith("https")
+    mailer = mailer or ConsoleMailer()
 
     def app(environ, start_response):
         method = environ.get("REQUEST_METHOD", "GET").upper()
@@ -90,6 +96,10 @@ def make_webauth(store, oauth_providers=None, base_url="http://localhost"):
             return _login(store, environ, start_response, secure)
         if rest == ["logout"] and method == "POST":
             return _logout(store, environ, start_response, secure)
+        if rest == ["forgot"] and method == "POST":
+            return _forgot(store, mailer, base_url, environ, start_response)
+        if rest == ["reset"] and method == "POST":
+            return _reset(store, environ, start_response, secure)
         if rest == ["me"] and method == "GET":
             return _me(store, environ, start_response)
         if rest[:1] == ["oauth"] and len(rest) == 3:
@@ -136,6 +146,55 @@ def _logout(store, environ, start_response, secure):
         accounts.destroy_session(store, jar[SESSION_COOKIE].value)
     return _json(start_response, "200 OK", {"ok": True},
                  extra=[_set_cookie(SESSION_COOKIE, "", secure=secure, max_age=0)])
+
+
+# Same response whether or not the email exists — never leak which addresses
+# are registered.
+_FORGOT_OK = {"ok": True,
+              "message": "If that email is registered, a reset link is on its way."}
+
+
+def _forgot(store, mailer, base_url, environ, start_response):
+    data, err = _read_json(environ)
+    if err:
+        return _json(start_response, "400 Bad Request", {"error": err})
+    email = (data.get("email") or "").strip()
+    if email:
+        token, user = accounts.create_password_reset(store, email)
+        if token and user:
+            link = f"{base_url.rstrip('/')}/auth/reset?token={token}"
+            mailer.send(Email(
+                to=user["email"],
+                subject="Reset your Help Me Write Better password",
+                body=(
+                    "We received a request to reset your password.\n\n"
+                    f"Use this link within the hour:\n  {link}\n\n"
+                    f"Or POST {{\"token\": \"{token}\", \"password\": \"<new>\"}} "
+                    "to /auth/reset.\n\n"
+                    "If you didn't ask for this, you can ignore this email — your "
+                    "password won't change."
+                ),
+            ))
+    return _json(start_response, "200 OK", _FORGOT_OK)
+
+
+def _reset(store, environ, start_response, secure):
+    data, err = _read_json(environ)
+    if err:
+        return _json(start_response, "400 Bad Request", {"error": err})
+    token = (data.get("token") or "").strip()
+    password = data.get("password") or ""
+    try:
+        user = accounts.reset_password(store, token, password)
+    except ValueError as exc:                       # password too short, etc.
+        return _json(start_response, "400 Bad Request", {"error": str(exc)})
+    if not user:
+        return _json(start_response, "400 Bad Request",
+                     {"error": "invalid or expired reset token"})
+    # Sign the user in on success (old sessions were invalidated by the reset).
+    session = accounts.create_session(store, user["id"])
+    return _json(start_response, "200 OK", {"user": _public(user)},
+                 extra=[_set_cookie(SESSION_COOKIE, session, secure=secure, max_age=2592000)])
 
 
 def current_user(store, environ):
