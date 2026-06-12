@@ -194,4 +194,10 @@ SAMPLES: dict[str, str] = {
         "(still confidential), and we're acquiring Project Falcon next month. Reach Maria "
         "Lopez at maria.lopez@example.com or 415-555-0148 if you have questions."
     ),
+    "dictate": (
+        "um so yeah i was thinking like maybe we could uh move the meeting to thursday "
+        "because friday is you know kind of packed and i mean i have the dentist thing "
+        "anyway so like thursday afternoon would be way better i think and also can you uh "
+        "bring the the budget numbers the q3 ones"
+    ),
 }

@@ -193,6 +193,26 @@ _EXTENDED_MODES: tuple[Mode, ...] = (
              "or erasing their voice. Return the polished text; if SHOW_CHANGES, list the "
              "corrections grouped by type (articles, prepositions, idiom, tense)."
          )),
+    Mode("dictate", "Turn a rambly voice/dictation transcript into clean written prose.",
+         "standard", aliases=("voice-memo", "dictation", "transcribe-clean"),
+         instruction=(
+             "The TEXT is a raw voice/dictation transcript - rambly spoken language with filler "
+             "words, false starts, repetition, run-on sentences, and little or no punctuation. Turn "
+             "it into clean, well-organized WRITTEN prose:\n"
+             "- Remove verbal filler ('um', 'uh', 'like', 'you know', 'I mean', and 'sort of'/'kind "
+             "of' when used as filler) and false starts/self-corrections (keep only the corrected "
+             "version).\n"
+             "- Merge repetition, fix run-ons, and add proper punctuation, capitalization, and "
+             "paragraph breaks.\n"
+             "- Convert spoken phrasing into natural written form in the speaker's own voice. Keep "
+             "their meaning, intent, facts, and key points EXACTLY - do not add ideas, opinions, or "
+             "details, and do not invent specifics.\n"
+             "- Default to the speaker's first-person register. If the dictation contains spoken "
+             "commands ('new paragraph', 'period', 'make this a bullet list'), apply them and don't "
+             "echo the command words.\n"
+             "- Honor the requested TONE/OUTPUT_FORMAT if given (e.g., email, note, message). Return "
+             "only the cleaned prose."
+         )),
     Mode("headline", "Generate titles / subject lines / hooks across angles.",
          "premium", aliases=("title", "subject-line", "headlines"),
          instruction=(
