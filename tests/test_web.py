@@ -75,6 +75,34 @@ def test_app_supports_service_preselect():
     assert b"URLSearchParams" in data
 
 
+def test_robots_txt_served():
+    cap, data = _call("GET", path="/robots.txt")
+    assert cap.status == "200 OK"
+    assert "text/plain" in dict(cap.headers)["Content-Type"]
+    assert b"User-agent: *" in data and b"Disallow: /auth/" in data
+
+
+def test_sitemap_served():
+    cap, data = _call("GET", path="/sitemap.xml")
+    assert cap.status == "200 OK"
+    assert "application/xml" in dict(cap.headers)["Content-Type"]
+    assert b"<urlset" in data
+
+
+def test_og_image_served():
+    cap, data = _call("GET", path="/og.svg")
+    assert cap.status == "200 OK"
+    assert "image/svg+xml" in dict(cap.headers)["Content-Type"]
+    assert b"<svg" in data
+
+
+def test_landing_has_seo_metadata():
+    cap, data = _call("GET", accept="text/html", path="/")
+    assert b'rel="canonical"' in data
+    assert b'property="og:title"' in data
+    assert b'application/ld+json' in data
+
+
 def test_curl_get_still_returns_json():
     # No HTML in Accept -> JSON info, not a page.
     cap, data = _call("GET", accept="*/*")
