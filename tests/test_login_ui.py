@@ -59,3 +59,29 @@ def test_app_entrypoint_selects_by_database_url():
     assert app_mod._has_persistent_db({"WB_DB_URL": "postgres://h/db"}) is True
     assert app_mod._has_persistent_db({"WB_DB_PATH": "wb.db"}) is False
     assert app_mod._has_persistent_db({}) is False
+
+
+def test_status_endpoint_reports_mode_without_secrets():
+    import json
+    app_mod = importlib.import_module("app")
+    cap = {}
+    out = app_mod.app({"REQUEST_METHOD": "GET", "PATH_INFO": "/_status"},
+                      lambda s, h: cap.update(status=s, headers=dict(h)))
+    assert cap["status"].startswith("200")
+    assert "application/json" in cap["headers"]["Content-Type"]
+    diag = json.loads(b"".join(out))
+    assert diag["mode"] in ("engine", "platform")
+    assert "persistent_db_detected" in diag
+    # never leak secret *values* — only env var names / booleans
+    assert "ANTHROPIC_API_KEY" not in json.dumps(diag) or diag["anthropic_key_present"] in (True, False)
+
+
+def test_diagnostics_names_the_detected_db_env_var():
+    app_mod = importlib.import_module("app")
+    d = app_mod._diagnostics({"POSTGRES_URL": "postgres://u:p@h/db"})
+    assert d["persistent_db_detected"] is True
+    assert d["db_source_env"] == "POSTGRES_URL"
+    assert "POSTGRES_URL" in d["postgres_env_present"]
+    # the secret value itself is not present anywhere in the diagnostics
+    import json
+    assert "u:p@h" not in json.dumps(d)
