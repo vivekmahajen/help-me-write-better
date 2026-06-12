@@ -179,6 +179,8 @@ export interface ClientOptions {
 export class WriteBetterClient {
   constructor(options: ClientOptions);
   improve(request: ImproveRequest): Promise<ImproveResponse>;
+  listTemplates(category?: string): Promise<Record<string, unknown>[]>;
+  useTemplate(template: string, fields: Record<string, unknown>, extra?: Record<string, unknown>): Promise<ImproveResponse & { template: string; variants: string[] }>;
   check(text: string, previous?: string): Promise<CheckResponse>;
   scan(text: string, modes?: ("plagiarism" | "ai_detection")[], minMatchPct?: number): Promise<ScanResponse>;
   getScan(scanId: string): Promise<ScanResponse>;

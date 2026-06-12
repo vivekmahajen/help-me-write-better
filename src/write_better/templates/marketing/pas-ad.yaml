@@ -1,0 +1,16 @@
+id: pas-ad
+name: PAS ad copy
+category: marketing
+description: Ad copy structured as Problem, Agitate, Solution.
+fields:
+  - { key: product, label: "Product / offer", type: text, required: true }
+  - { key: audience, label: "Target audience", type: text, required: true }
+  - { key: problem, label: "Problem they face", type: text, required: true }
+  - { key: cta, label: "Call to action", type: text, required: true }
+defaults: { service: write, format: plain, length: short }
+variants: 3
+prompt: |
+  Write ad copy for {product} for {audience} using Problem-Agitate-Solution.
+  Problem: name {problem} plainly. Agitate: make the cost of it vivid but honest —
+  no fear-mongering. Solution: position {product} as the fix and end with {cta}.
+  Label the three parts.

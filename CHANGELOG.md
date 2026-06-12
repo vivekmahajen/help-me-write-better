@@ -13,6 +13,12 @@
 - SDK: `client.scan()` / `client.getScan()`; OpenAPI documents `/v1/scan*`.
 - `docs/features/plagiarism.md`, `docs/decisions/ADR-001-plagiarism-vendor.md`,
   `.env.example`.
+- **Marketing-copy templates** (Feature 4): a YAML template engine executed
+  through `write` — `GET /v1/templates` (schema drives forms) + `template` /
+  `template_fields` on `/v1/improve`, with N variants (clamped to the plan cap),
+  422 on unknown template / missing field (schema echoed). Stdlib-only YAML
+  subset loader (no pyyaml). 10 launch templates; adding a YAML needs no code.
+  SDK: `client.listTemplates()` / `client.useTemplate()`. `docs/features/templates.md`.
 - **Citation generator** (Feature 3): `POST /v1/cite` + `GET /v1/citations`.
   Zero marginal cost, no key — DOI→Crossref, ISBN→OpenLibrary, URL→meta tags,
   free-text→LLM/heuristic (flagged for verification). APA 7 / MLA 9 / Chicago

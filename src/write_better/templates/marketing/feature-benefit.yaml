@@ -1,0 +1,14 @@
+id: feature-benefit
+name: Feature → benefit bullets
+category: marketing
+description: Turn a feature list into customer-facing benefit bullets.
+fields:
+  - { key: features, label: "Features (one per line or comma-separated)", type: textarea, required: true }
+  - { key: audience, label: "Audience", type: text, required: false }
+defaults: { service: write, format: markdown, length: short }
+variants: 1
+prompt: |
+  Rewrite each of these features as a benefit bullet that answers "so what?" for
+  {{#audience}}{audience}{{/audience}}{{^audience}}the customer{{/audience}}.
+  Keep the mapping 1:1, lead with the outcome, stay concrete. Features:
+  {features}

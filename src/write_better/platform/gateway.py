@@ -26,7 +26,12 @@ from ..engine import Request, improve as engine_improve
 from ..modes import resolve_services
 from ..prompt import VALID_FORMATS
 from ..realtime import check_text
+from ..templating import (
+    MissingFields, get_template, list_templates, load_templates, validate_and_render,
+)
 from . import accounts, analytics, metering, scans, teams
+
+MAX_VARIANTS = 5
 from .openapi import DOCS_PAGE, spec as openapi_spec
 from .store import Store
 from .vendors import VendorUnavailable, vendor_from_env
@@ -125,6 +130,7 @@ def make_gateway(store: Store, engine=engine_improve, vendor="env",
                     "GET /v1/scans/{id}": "fetch a scan result",
                     "POST /v1/cite": "generate/format citations (DOI/ISBN/URL/free-text)",
                     "GET /v1/citations": "your saved bibliography",
+                    "GET /v1/templates": "template library (drives dynamic forms)",
                     "GET /v1/openapi.json": "the OpenAPI 3.1 contract",
                     "GET /v1/docs": "human-readable API docs",
                 },
@@ -179,6 +185,11 @@ def make_gateway(store: Store, engine=engine_improve, vendor="env",
             if result is None:
                 return _json(start_response, "404 Not Found", {"error": "no such scan"})
             return _json(start_response, "200 OK", result)
+
+        if rest == ["templates"] and method == "GET":
+            qs = parse_qs(environ.get("QUERY_STRING", ""))
+            category = (qs.get("category") or [None])[0]
+            return _json(start_response, "200 OK", {"templates": list_templates(category)})
 
         if rest == ["cite"] and method == "POST":
             return _cite(store, citation_http, user, environ, start_response)
@@ -468,6 +479,25 @@ def _improve(store, engine, user, environ, start_response):
     if err:
         return _json(start_response, "400 Bad Request", {"error": err})
 
+    # Template path (Features 4 & 5): render a versioned prompt config into `text`.
+    n_variants = 1
+    if data.get("template"):
+        tpl = get_template(data["template"])
+        if not tpl:
+            return _json(start_response, "422 Unprocessable Entity", {
+                "error": f"unknown template {data['template']!r}", "code": "unknown_template",
+                "templates": list(load_templates().keys())})
+        try:
+            rendered = validate_and_render(tpl, data.get("template_fields") or {})
+        except MissingFields as exc:
+            return _json(start_response, "422 Unprocessable Entity", {
+                "error": str(exc), "code": "missing_fields", "missing": exc.missing,
+                "fields": list(tpl.fields)})
+        data = {**data, "text": rendered,
+                "services": data.get("services") or tpl.defaults.get("service", "write"),
+                "format": data.get("format") or tpl.defaults.get("format", "markdown")}
+        n_variants = max(1, min(int(data.get("variants") or tpl.variants or 1), MAX_VARIANTS))
+
     text = (data.get("text") or "").strip()
     if not text:
         return _json(start_response, "400 Bad Request", {"error": "'text' is required"})
@@ -483,7 +513,8 @@ def _improve(store, engine, user, environ, start_response):
     except ValueError as exc:
         return _json(start_response, "400 Bad Request", {"error": str(exc)})
 
-    # Enforce the plan cap BEFORE spending on the engine.
+    # Enforce the plan cap BEFORE spending on the engine. For variants, clamp to
+    # what the plan allows (premium services consume one generation each).
     allowed, q = metering.check_allowed(store, user, modes)
     if not allowed:
         return _json(start_response, "402 Payment Required", {
@@ -492,6 +523,8 @@ def _improve(store, engine, user, environ, start_response):
             "code": "cap_reached",
             "quota": q,
         })
+    if metering.consumes_premium(modes) and n_variants > 1:
+        n_variants = max(1, min(n_variants, q["premium_remaining"]))
 
     # Inject the team style guide (if any) so every member's writing conforms.
     org = store.get_org_for_user(user["id"])
@@ -513,25 +546,33 @@ def _improve(store, engine, user, environ, start_response):
         style_guide=style_guide or None,
     )
 
-    try:
-        result = engine(req)
-    except Exception as exc:  # surface engine/SDK errors cleanly
-        return _json(start_response, "502 Bad Gateway",
-                     {"error": f"generation failed: {exc}"})
+    outputs, last = [], None
+    in_tokens = out_tokens = 0
+    for _ in range(n_variants):
+        try:
+            last = engine(req)
+        except Exception as exc:  # surface engine/SDK errors cleanly
+            return _json(start_response, "502 Bad Gateway",
+                         {"error": f"generation failed: {exc}"})
+        outputs.append(last.text)
+        in_tokens += last.input_tokens
+        out_tokens += last.output_tokens
+        # Meter each generation (feeds billing + analytics).
+        metering.record(store, user, last.services, last.model,
+                        last.input_tokens, last.output_tokens,
+                        words=analytics.word_count(text))
 
-    # Meter the completed call (feeds billing + analytics).
-    metering.record(store, user, result.services, result.model,
-                    result.input_tokens, result.output_tokens,
-                    words=analytics.word_count(text))
-
-    return _json(start_response, "200 OK", {
-        "text": result.text,
-        "model": result.model,
-        "services": [m.name for m in result.services],
-        "usage": {"input_tokens": result.input_tokens,
-                  "output_tokens": result.output_tokens},
+    body = {
+        "text": outputs[0],
+        "model": last.model,
+        "services": [m.name for m in last.services],
+        "usage": {"input_tokens": in_tokens, "output_tokens": out_tokens},
         "quota": metering.quota(store, user),
-    })
+    }
+    if data.get("template"):
+        body["template"] = data["template"]
+        body["variants"] = outputs
+    return _json(start_response, "200 OK", body)
 
 
 # Lazily-built default app for deployment (uses WB_DB_PATH; real engine).

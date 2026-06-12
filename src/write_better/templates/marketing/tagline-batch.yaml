@@ -1,0 +1,13 @@
+id: tagline-batch
+name: Tagline / slogan batch
+category: marketing
+description: A batch of distinct tagline options spanning different angles.
+fields:
+  - { key: product, label: "Product / brand", type: text, required: true }
+  - { key: positioning, label: "Positioning / what makes it different", type: text, required: true }
+defaults: { service: write, format: plain, length: short }
+variants: 1
+prompt: |
+  Generate 10 distinct tagline options for {product}, positioned as: {positioning}.
+  Span angles: benefit-led, playful, bold, understated, and metaphorical. Each ≤7
+  words. Number them. No clichés ("Think different", "Just do it" derivatives).

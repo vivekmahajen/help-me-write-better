@@ -1,0 +1,15 @@
+id: landing-hero
+name: Landing-page hero
+category: marketing
+description: Headline, subheadline, and CTA for a landing-page hero section.
+fields:
+  - { key: product, label: "Product", type: text, required: true }
+  - { key: audience, label: "Audience", type: text, required: true }
+  - { key: benefit, label: "Core benefit", type: text, required: true }
+  - { key: tone, label: "Tone", type: select, options: [bold, friendly, premium, technical], default: bold }
+defaults: { service: write, format: markdown, length: short }
+variants: 3
+prompt: |
+  Write a landing-page hero for {product} (audience: {audience}) in a {tone} tone.
+  Output exactly: a headline (≤10 words, benefit-led on {benefit}), a one-sentence
+  subheadline, and a 2-4 word CTA button label. No jargon, no "the #1 platform".

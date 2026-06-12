@@ -24,8 +24,8 @@ write-better-admin = "write_better.platform.admin:main"
 where = ["src"]
 
 [tool.setuptools.package-data]
-# Ship the operator prompt as package data.
-"write_better" = ["operator_prompt.md"]
+# Ship the operator prompt and template library as package data.
+"write_better" = ["operator_prompt.md", "templates/**/*.yaml"]
 
 [tool.pytest.ini_options]
 pythonpath = ["src"]

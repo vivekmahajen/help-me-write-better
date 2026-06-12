@@ -1,0 +1,17 @@
+id: cold-email-b2b
+name: Cold email (B2B)
+category: marketing
+description: Short, personalized cold outreach with one clear CTA.
+fields:
+  - { key: product, label: "What you're selling", type: text, required: true }
+  - { key: audience, label: "Who you're emailing", type: text, required: true }
+  - { key: pain, label: "Pain point", type: text, required: false }
+  - { key: cta, label: "Call to action", type: text, required: true }
+  - { key: tone, label: "Tone", type: select, options: [direct, warm, playful, formal], default: direct }
+defaults: { service: write, format: email, length: short }
+variants: 3
+prompt: |
+  Write a {tone} cold B2B email selling {product} to {audience}.
+  {{#pain}}Anchor on this pain point: {pain}.{{/pain}}
+  Keep it under 120 words. End with exactly one CTA: {cta}.
+  No subject-line clichés, no "I hope this finds you well," no fake personalization.

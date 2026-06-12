@@ -43,6 +43,16 @@ export class WriteBetterClient {
   // --- engine ---
   improve(request) { return this._request("POST", "/v1/improve", request); }
 
+  // --- templates (marketing + creative) ---
+  listTemplates(category) {
+    const q = category ? `?category=${encodeURIComponent(category)}` : "";
+    return this._request("GET", `/v1/templates${q}`).then((r) => r.templates);
+  }
+  useTemplate(template, fields, extra = {}) {
+    return this._request("POST", "/v1/improve",
+      { template, template_fields: fields, ...extra });
+  }
+
   // --- real-time inline check ---
   check(text, previous) {
     const body = previous !== undefined ? { text, previous } : { text };

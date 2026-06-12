@@ -1,0 +1,16 @@
+id: aida-ad
+name: AIDA ad copy
+category: marketing
+description: Ad copy structured as Attention, Interest, Desire, Action.
+fields:
+  - { key: product, label: "Product / offer", type: text, required: true }
+  - { key: audience, label: "Target audience", type: text, required: true }
+  - { key: benefit, label: "Main benefit", type: text, required: true }
+  - { key: cta, label: "Call to action", type: text, required: true }
+defaults: { service: write, format: plain, length: short }
+variants: 3
+prompt: |
+  Write ad copy for {product} aimed at {audience}, following the AIDA framework:
+  Attention (a hook), Interest (why it matters), Desire (the payoff — center it on
+  {benefit}), Action ({cta}). Label each of the four parts. Tight and concrete; no
+  hype words ("revolutionary", "game-changing").
