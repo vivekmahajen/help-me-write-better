@@ -120,6 +120,24 @@ CREATE TABLE IF NOT EXISTS org_members (
     UNIQUE(org_id, user_id)
 );
 CREATE INDEX IF NOT EXISTS ix_org_members_user ON org_members(user_id);
+
+-- External scans (plagiarism / AI detection). Idempotent: completed results are
+-- cached by (kind, content_hash) so identical re-scans are free.
+CREATE TABLE IF NOT EXISTS scans (
+    id              TEXT PRIMARY KEY,
+    user_id         INTEGER NOT NULL REFERENCES users(id),
+    kind            TEXT NOT NULL,                -- 'plagiarism' | 'ai_detection' | joined
+    content_hash    TEXT NOT NULL,
+    status          TEXT NOT NULL,                -- 'pending' | 'complete' | 'failed'
+    result          TEXT,                         -- JSON
+    credits_charged INTEGER NOT NULL DEFAULT 0,
+    vendor          TEXT,
+    created_at      INTEGER NOT NULL,
+    completed_at    INTEGER
+);
+CREATE UNIQUE INDEX IF NOT EXISTS scans_cache ON scans(kind, content_hash)
+    WHERE status = 'complete';
+CREATE INDEX IF NOT EXISTS ix_scans_user ON scans(user_id);
 """
 
 # Columns added after the initial release; applied as idempotent migrations.
@@ -567,6 +585,64 @@ class Store:
                 (style_guide_json, org_id),
             )
             self._conn.commit()
+
+    # --- scans (external plagiarism / AI detection) --------------------------
+
+    def insert_scan(self, scan_id: str, user_id: int, kind: str, content_hash: str,
+                    status: str, vendor: Optional[str]) -> dict:
+        with self._lock:
+            self._conn.execute(
+                "INSERT INTO scans(id, user_id, kind, content_hash, status, vendor, created_at) "
+                "VALUES (?,?,?,?,?,?,?)",
+                (scan_id, user_id, kind, content_hash, status, vendor, int(time.time())),
+            )
+            self._conn.commit()
+        return self.get_scan_by_id(scan_id)
+
+    def complete_scan(self, scan_id: str, result: dict, credits: int) -> dict:
+        with self._lock:
+            self._conn.execute(
+                "UPDATE scans SET status='complete', result=?, credits_charged=?, "
+                "completed_at=? WHERE id=?",
+                (json.dumps(result), credits, int(time.time()), scan_id),
+            )
+            self._conn.commit()
+        return self.get_scan_by_id(scan_id)
+
+    def fail_scan(self, scan_id: str) -> None:
+        with self._lock:
+            self._conn.execute(
+                "UPDATE scans SET status='failed', completed_at=? WHERE id=?",
+                (int(time.time()), scan_id),
+            )
+            self._conn.commit()
+
+    def get_scan_by_id(self, scan_id: str) -> Optional[dict]:
+        row = self._conn.execute("SELECT * FROM scans WHERE id = ?", (scan_id,)).fetchone()
+        return dict(row) if row else None
+
+    def get_scan(self, user_id: int, scan_id: str) -> Optional[dict]:
+        """Owner-scoped fetch."""
+        row = self._conn.execute(
+            "SELECT * FROM scans WHERE id = ? AND user_id = ?", (scan_id, user_id)
+        ).fetchone()
+        return dict(row) if row else None
+
+    def get_cached_scan(self, kind: str, content_hash: str) -> Optional[dict]:
+        row = self._conn.execute(
+            "SELECT * FROM scans WHERE kind = ? AND content_hash = ? AND status = 'complete' "
+            "ORDER BY completed_at DESC LIMIT 1",
+            (kind, content_hash),
+        ).fetchone()
+        return dict(row) if row else None
+
+    def scan_credits_since(self, user_id: int, since_ts: int) -> int:
+        row = self._conn.execute(
+            "SELECT COALESCE(SUM(credits_charged),0) AS n FROM scans "
+            "WHERE user_id = ? AND created_at >= ?",
+            (user_id, since_ts),
+        ).fetchone()
+        return int(row["n"])
 
     # --- internal ------------------------------------------------------------
 

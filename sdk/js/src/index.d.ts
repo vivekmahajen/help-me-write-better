@@ -50,6 +50,34 @@ export interface Suggestion {
 
 export interface CheckResponse { suggestions: Suggestion[]; count: number; }
 
+export interface PlagiarismResult {
+  status: string;
+  content_hash: string;
+  overall_match_pct: number;
+  sources: { url: string; title: string; match_pct: number; spans: unknown[] }[];
+  scanned_words: number;
+  credits_charged: number;
+  cached: boolean;
+  disclaimer: string;
+}
+
+export interface AiDetectionResult {
+  status: string;
+  band: "human" | "uncertain" | "likely_ai";
+  score: number;
+  confidence_note: string;
+  per_section: { start: number; end: number; band: string; score: number }[];
+  credits_charged: number;
+  cached: boolean;
+}
+
+export interface ScanResponse {
+  scan_id: string;
+  status: "pending" | "complete" | "failed";
+  plagiarism?: PlagiarismResult;
+  ai_detection?: AiDetectionResult;
+}
+
 export interface AnalyticsSummary {
   calls: number;
   words: number;
@@ -140,6 +168,8 @@ export class WriteBetterClient {
   constructor(options: ClientOptions);
   improve(request: ImproveRequest): Promise<ImproveResponse>;
   check(text: string, previous?: string): Promise<CheckResponse>;
+  scan(text: string, modes?: ("plagiarism" | "ai_detection")[], minMatchPct?: number): Promise<ScanResponse>;
+  getScan(scanId: string): Promise<ScanResponse>;
   getAccount(): Promise<Account>;
   getUsage(): Promise<UsageReport>;
   getAnalytics(windowDays?: number): Promise<AnalyticsResponse>;

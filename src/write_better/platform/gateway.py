@@ -25,9 +25,10 @@ from ..engine import Request, improve as engine_improve
 from ..modes import resolve_services
 from ..prompt import VALID_FORMATS
 from ..realtime import check_text
-from . import accounts, analytics, metering, teams
+from . import accounts, analytics, metering, scans, teams
 from .openapi import DOCS_PAGE, spec as openapi_spec
 from .store import Store
+from .vendors import VendorUnavailable, vendor_from_env
 
 API_VERSION = "v1"
 _CORS = ("Access-Control-Allow-Origin", "*")
@@ -78,8 +79,14 @@ def _read_json(environ) -> tuple[dict | None, str | None]:
     return data, None
 
 
-def make_gateway(store: Store, engine=engine_improve):
-    """Build the gateway WSGI app over ``store``. ``engine`` is injectable for tests."""
+def make_gateway(store: Store, engine=engine_improve, vendor="env"):
+    """Build the gateway WSGI app over ``store``.
+
+    ``engine`` and ``vendor`` (the plagiarism/AI scan provider) are injectable for
+    tests; ``vendor="env"`` resolves it from ``ORIGINALITY_API_KEY`` (None if unset).
+    """
+    if vendor == "env":
+        vendor = vendor_from_env()
 
     def app(environ, start_response):
         method = environ.get("REQUEST_METHOD", "GET").upper()
@@ -111,6 +118,8 @@ def make_gateway(store: Store, engine=engine_improve):
                     "GET|POST /v1/documents/{id}/versions": "list / add a version",
                     "POST /v1/improve": "run the engine (metered, capped)",
                     "POST /v1/check": "real-time inline check (local, uncapped)",
+                    "POST /v1/scan": "plagiarism / AI-detection scan (external, metered)",
+                    "GET /v1/scans/{id}": "fetch a scan result",
                     "GET /v1/openapi.json": "the OpenAPI 3.1 contract",
                     "GET /v1/docs": "human-readable API docs",
                 },
@@ -156,6 +165,15 @@ def make_gateway(store: Store, engine=engine_improve):
 
         if rest == ["check"] and method == "POST":
             return _check(store, user, environ, start_response)
+
+        if rest == ["scan"] and method == "POST":
+            return _scan(store, vendor, user, environ, start_response)
+
+        if rest[:1] == ["scans"] and len(rest) == 2 and method == "GET":
+            result = scans.get(store, user, rest[1])
+            if result is None:
+                return _json(start_response, "404 Not Found", {"error": "no such scan"})
+            return _json(start_response, "200 OK", result)
 
         if rest == ["analytics"] and method == "GET":
             qs = parse_qs(environ.get("QUERY_STRING", ""))
@@ -263,6 +281,38 @@ def _org_view(store, org, user_id):
         "role": member["role"] if member else None,
         "members": store.list_org_members(org["id"]),
     }
+
+
+def _scan(store, vendor, user, environ, start_response):
+    """Plagiarism / AI-detection scan (Features 1 & 2). External + metered."""
+    data, err = _read_json(environ)
+    if err:
+        return _json(start_response, "400 Bad Request", {"error": err})
+    text = data.get("text")
+    if not isinstance(text, str) or not text.strip():
+        return _json(start_response, "400 Bad Request", {"error": "'text' is required"})
+    opts = data.get("check") if isinstance(data.get("check"), dict) else {}
+    modes = opts.get("modes") or data.get("modes") or ["plagiarism"]
+    try:
+        min_match = float(opts.get("min_match_pct", data.get("min_match_pct", 1.0)))
+    except (TypeError, ValueError):
+        min_match = 1.0
+
+    try:
+        result = scans.submit(store, user, text, modes, vendor,
+                              min_match_pct=min_match,
+                              period_start=metering.period_start())
+    except scans.ScanCapError as exc:
+        return _json(start_response, "402 Payment Required", {
+            "error": (f"scan credit cap reached "
+                      f"({exc.quota['scan_credits_used']}/{exc.quota['scan_cap']} this period)"),
+            "code": "scan_cap_reached", "quota": exc.quota})
+    except VendorUnavailable as exc:
+        return _json(start_response, "503 Service Unavailable", {
+            "error": str(exc), "code": "feature_unavailable",
+            "retry_after": exc.retry_after}, extra=[("Retry-After", str(exc.retry_after))])
+
+    return _json(start_response, "200 OK", result)
 
 
 def _check(store, user, environ, start_response):

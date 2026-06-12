@@ -170,6 +170,28 @@ def spec() -> dict:
                         "responses": {"200": _json_resp("Rollup", "RollupEnvelope"),
                                       "403": _err("Admin only"), "404": _err("No team")}},
             },
+            "/v1/scan": {
+                "post": {
+                    "operationId": "scan",
+                    "summary": "Plagiarism / AI-detection scan (external, metered)",
+                    "requestBody": _json_body("ScanRequest"),
+                    "responses": {"200": _json_resp("Scan result", "ScanResponse"),
+                                  "400": _err("Invalid request"),
+                                  "401": _err("Unauthorized"),
+                                  "402": _err("Scan credit cap reached"),
+                                  "503": _err("Feature unavailable (vendor not configured)")},
+                }
+            },
+            "/v1/scans/{id}": {
+                "parameters": [{"name": "id", "in": "path", "required": True,
+                                "schema": {"type": "string"}}],
+                "get": {
+                    "operationId": "getScan",
+                    "summary": "Fetch a scan result",
+                    "responses": {"200": _json_resp("Scan result", "ScanResponse"),
+                                  "401": _err("Unauthorized"), "404": _err("No such scan")},
+                }
+            },
             "/v1/documents": {
                 "get": {
                     "operationId": "listDocuments",
@@ -500,6 +522,33 @@ def _schemas() -> dict:
             "properties": {"email": {"type": "string"},
                            "role": {"type": "string", "enum": ["admin", "member"]}},
             "required": ["email"],
+        },
+        "ScanRequest": {
+            "type": "object",
+            "properties": {
+                "text": {"type": "string"},
+                "check": {
+                    "type": "object",
+                    "properties": {
+                        "modes": {"type": "array",
+                                  "items": {"type": "string",
+                                            "enum": ["plagiarism", "ai_detection"]}},
+                        "min_match_pct": {"type": "number", "default": 1.0},
+                    },
+                },
+            },
+            "required": ["text"],
+        },
+        "ScanResponse": {
+            "type": "object",
+            "description": "Plagiarism and/or AI-detection result; carries explicit "
+                           "uncertainty language (disclaimer / confidence_note).",
+            "properties": {
+                "scan_id": {"type": "string"},
+                "status": {"type": "string", "enum": ["pending", "complete", "failed"]},
+                "plagiarism": {"type": "object"},
+                "ai_detection": {"type": "object"},
+            },
         },
     }
 
