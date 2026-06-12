@@ -49,6 +49,14 @@ export class WriteBetterClient {
     return this._request("POST", "/v1/check", body);
   }
 
+  // --- plagiarism / AI-detection scan ---
+  scan(text, modes = ["plagiarism"], minMatchPct) {
+    const check = { modes };
+    if (minMatchPct !== undefined) check.min_match_pct = minMatchPct;
+    return this._request("POST", "/v1/scan", { text, check });
+  }
+  getScan(scanId) { return this._request("GET", `/v1/scans/${scanId}`); }
+
   // --- account / usage / history / preferences ---
   getAccount() { return this._request("GET", "/v1/account"); }
   getUsage() { return this._request("GET", "/v1/usage"); }

@@ -83,6 +83,7 @@ _MIN_BODY = {
     "CreateOrgInput": {"name": "Acme"},
     "AddMemberInput": {"email": "nobody@example.com"},
     "StyleGuide": {"tone": "warm"},
+    "ScanRequest": {"text": "hello world", "check": {"modes": ["plagiarism"]}},
 }
 
 
@@ -121,9 +122,10 @@ def test_every_spec_route_is_wired_in_the_gateway():
 
 def test_documented_paths_cover_the_core_api():
     paths = spec()["paths"]
-    for required in ("/v1/improve", "/v1/check", "/v1/usage", "/v1/analytics",
-                     "/v1/account", "/v1/history", "/v1/preferences", "/v1/documents",
-                     "/v1/documents/{id}", "/v1/documents/{id}/versions"):
+    for required in ("/v1/improve", "/v1/check", "/v1/scan", "/v1/scans/{id}",
+                     "/v1/usage", "/v1/analytics", "/v1/account", "/v1/history",
+                     "/v1/preferences", "/v1/documents", "/v1/documents/{id}",
+                     "/v1/documents/{id}/versions"):
         assert required in paths
 
 
