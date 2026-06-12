@@ -184,4 +184,9 @@ SAMPLES: dict[str, str] = {
         "deliver by the end of next month, and is there any flexibility on cost? Let me "
         "know what's possible. — Dana"
     ),
+    "send-check": (
+        "This is the THIRD time the invoice has been late and frankly it's getting "
+        "ridiculous. If I don't see payment by tomorrow I'm done working with you people. "
+        "Just sort it out already."
+    ),
 }
