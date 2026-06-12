@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html>
+<head>
+<base target="_top">
+<style>
+  body { font:14px/1.5 system-ui,-apple-system,Segoe UI,Roboto,sans-serif;
+         margin:0; padding:14px; color:#1b1b2a; }
+  h1 { font-size:14px; margin:0 0 4px; }
+  p.hint { color:#666; font-size:12px; margin:0 0 12px; }
+  label { display:block; font-size:11px; color:#666; text-transform:uppercase;
+          letter-spacing:.04em; margin:12px 0 5px; }
+  select, input { width:100%; padding:8px; border:1px solid #ccc; border-radius:6px; font:inherit; }
+  button { width:100%; margin-top:14px; padding:10px; border:0; border-radius:6px;
+           background:#3b6ef0; color:#fff; font-weight:600; cursor:pointer; }
+  button:disabled { opacity:.6; cursor:default; }
+  .status { margin-top:10px; color:#666; font-size:13px; min-height:18px; }
+  details { margin-top:16px; } summary { color:#666; font-size:12px; cursor:pointer; }
+</style>
+</head>
+<body>
+  <h1>Help Me Write Better</h1>
+  <p class="hint">Select text in the document, choose a service, then Improve —
+     it replaces the selection in place.</p>
+
+  <label for="service">Service</label>
+  <select id="service"></select>
+
+  <button id="go" onclick="improve()">Improve selection</button>
+  <div class="status" id="status"></div>
+
+  <details>
+    <summary>Settings</summary>
+    <label for="apiBase">Engine URL</label>
+    <input id="apiBase" type="text" placeholder="https://your-instance.example.com">
+    <button onclick="saveBase()">Save</button>
+  </details>
+
+<script>
+  var SERVICES = ["clarify","correct","tighten","retone","paraphrase",
+                  "summarize","reply","send-check","dictate","confidential"];
+
+  function fill() {
+    document.getElementById('service').innerHTML =
+      SERVICES.map(function (s) { return '<option>' + s + '</option>'; }).join('');
+  }
+  function status(m) { document.getElementById('status').textContent = m; }
+
+  function improve() {
+    var btn = document.getElementById('go');
+    btn.disabled = true; status('Polishing…');
+    google.script.run
+      .withSuccessHandler(function () { btn.disabled = false; status('Improved ✓'); })
+      .withFailureHandler(function (e) { btn.disabled = false; status('Error: ' + e.message); })
+      .improveSelection(document.getElementById('service').value);
+  }
+
+  function saveBase() {
+    google.script.run
+      .withSuccessHandler(function (b) { status('Saved engine URL: ' + b); })
+      .setApiBase(document.getElementById('apiBase').value);
+  }
+
+  function loadBase() {
+    google.script.run
+      .withSuccessHandler(function (b) { document.getElementById('apiBase').value = b; })
+      .getApiBase();
+  }
+
+  fill();
+  loadBase();
+</script>
+</body>
+</html>
