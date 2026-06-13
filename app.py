@@ -97,8 +97,37 @@ def _make_app(selected):
     return app
 
 
+# Standard security headers — legitimate-site hygiene that protects users and
+# supports a Safe Browsing review. The pages are self-contained (inline CSS/JS,
+# no external assets), so a same-origin CSP with 'unsafe-inline' is safe.
+SECURITY_HEADERS = [
+    ("X-Content-Type-Options", "nosniff"),
+    ("X-Frame-Options", "DENY"),
+    ("Referrer-Policy", "strict-origin-when-cross-origin"),
+    ("Strict-Transport-Security", "max-age=63072000; includeSubDomains"),
+    ("Content-Security-Policy",
+     "default-src 'self'; script-src 'self' 'unsafe-inline'; "
+     "style-src 'self' 'unsafe-inline'; img-src 'self' data:; "
+     "connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"),
+]
+
+
+def _with_security_headers(selected):
+    """Add the security headers to every response (without clobbering existing ones)."""
+    def app(environ, start_response):
+        def _sr(status, headers, exc_info=None):
+            present = {k.lower() for k, _ in headers}
+            merged = list(headers) + [(k, v) for k, v in SECURITY_HEADERS
+                                      if k.lower() not in present]
+            if exc_info is not None:
+                return start_response(status, merged, exc_info)
+            return start_response(status, merged)
+        return selected(environ, _sr)
+    return app
+
+
 # Top-level binding so Vercel's static entrypoint scan finds ``app`` (a nested
 # import inside an if/else is invisible to it).
-app = _make_app(_select_app())
+app = _with_security_headers(_make_app(_select_app()))
 
 __all__ = ["app", "_has_persistent_db", "_select_app", "_diagnostics", "_DIAG"]
