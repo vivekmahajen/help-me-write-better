@@ -21,7 +21,7 @@ from typing import Callable, Optional
 
 HttpGet = Callable[[str, dict], str]  # (url, headers) -> body text
 
-STYLES = ("apa", "mla", "chicago")
+STYLES = ("apa", "mla", "chicago", "harvard", "ieee")
 _UA = "help-me-write-better/1.0 (mailto:cite@help-me-write-better.example)"
 
 
@@ -158,46 +158,153 @@ def _names_mla(authors):
     return lead + (", et al" if len(authors) > 1 else "")
 
 
+def _names_harvard(authors):
+    """`LeCun, Y., Bengio, Y. and Hinton, G.` — APA-style with 'and' before last."""
+    items = []
+    for a in authors:
+        initials = " ".join(f"{p[0]}." for p in a.get("given", "").split() if p)
+        items.append(f"{a.get('family','')}, {initials}".strip().rstrip(","))
+    if len(items) <= 1:
+        return items[0] if items else ""
+    return ", ".join(items[:-1]) + " and " + items[-1]
+
+
+def _names_ieee(authors):
+    """`Y. LeCun, Y. Bengio, and G. Hinton` — initials first, family last."""
+    items = []
+    for a in authors:
+        initials = " ".join(f"{p[0]}." for p in a.get("given", "").split() if p)
+        items.append(f"{initials} {a.get('family','')}".strip())
+    if len(items) <= 1:
+        return items[0] if items else ""
+    if len(items) == 2:
+        return items[0] + " and " + items[1]
+    return ", ".join(items[:-1]) + ", and " + items[-1]
+
+
 def _year(csl):
     return csl.get("issued") or "n.d."
 
 
-def format_bibliography(csl: dict, style: str) -> str:
-    style = style.lower()
-    title = csl.get("title", "")
+def _itype(csl):
+    """Collapse the CSL type to one of: article | book | chapter | webpage."""
+    t = (csl.get("type") or "").lower()
+    if t == "book":
+        return "book"
+    if t in ("chapter", "book-chapter"):
+        return "chapter"
+    if t in ("webpage", "website", "post-weblog", "post"):
+        return "webpage"
+    return "article"
+
+
+def _apa(csl):
+    t = _itype(csl)
+    A = _names_apa(csl.get("author", []))
+    year, title = _year(csl), csl.get("title", "")
     container = csl.get("container-title", "")
-    year = _year(csl)
-    if style == "apa":
-        out = f"{_names_apa(csl.get('author', []))} ({year}). {title}."
-        if container:
-            vol = csl.get("volume") or ""
-            iss = f"({csl['issue']})" if csl.get("issue") else ""
-            page = f", {csl['page']}" if csl.get("page") else ""
-            out += f" *{container}*"
-            out += f", {vol}{iss}{page}." if vol or page else "."
+    if t == "book":
+        out = f"{A} ({year}). *{title}*."
         if csl.get("publisher"):
             out += f" {csl['publisher']}."
-        if csl.get("DOI"):
-            out += f" https://doi.org/{csl['DOI']}"
-        elif csl.get("URL") and csl.get("type") == "webpage":
+        return _squish(out)
+    if t == "chapter":
+        out = f"{A} ({year}). {title}."
+        if container:
+            out += f" In *{container}*"
+            out += f" (pp. {csl['page']})." if csl.get("page") else "."
+        if csl.get("publisher"):
+            out += f" {csl['publisher']}."
+        return _squish(out)
+    if t == "webpage":
+        out = f"{A} ({year}). *{title}*."
+        if container:
+            out += f" {container}."
+        if csl.get("URL"):
             out += f" {csl['URL']}"
         return _squish(out)
-    if style == "mla":
-        names = _names_mla(csl.get("author", []))
-        out = f"{names + '. ' if names else ''}\"{title}.\""
+    # article
+    out = f"{A} ({year}). {title}."
+    if container:
+        vol = csl.get("volume") or ""
+        iss = f"({csl['issue']})" if csl.get("issue") else ""
+        page = f", {csl['page']}" if csl.get("page") else ""
+        out += f" *{container}*"
+        out += f", {vol}{iss}{page}." if vol or page else "."
+    if csl.get("publisher"):
+        out += f" {csl['publisher']}."
+    if csl.get("DOI"):
+        out += f" https://doi.org/{csl['DOI']}"
+    elif csl.get("URL"):
+        out += f" {csl['URL']}"
+    return _squish(out)
+
+
+def _mla(csl):
+    t = _itype(csl)
+    names = _names_mla(csl.get("author", []))
+    lead = f"{names}. " if names else ""
+    year, title = _year(csl), csl.get("title", "")
+    container = csl.get("container-title", "")
+    if t == "book":
+        out = f"{lead}*{title}*."
+        if csl.get("publisher"):
+            out += f" {csl['publisher']},"
+        out += f" {year}."
+        return _squish(out)
+    if t == "webpage":
+        out = f'{lead}"{title}."'
         if container:
             out += f" *{container}*,"
-        if csl.get("volume"):
-            out += f" vol. {csl['volume']},"
-        if csl.get("issue"):
-            out += f" no. {csl['issue']},"
         out += f" {year}"
-        if csl.get("page"):
-            out += f", pp. {csl['page']}"
+        if csl.get("URL"):
+            out += f", {csl['URL']}"
         out += "."
         return _squish(out)
-    # chicago author-date
-    out = f"{_names_apa(csl.get('author', []))}. {year}. \"{title}.\""
+    # article / chapter both use the quoted-title + container shape
+    out = f'{lead}"{title}."'
+    if container:
+        out += f" *{container}*,"
+    if t == "chapter" and csl.get("publisher"):
+        out += f" {csl['publisher']},"
+    if csl.get("volume"):
+        out += f" vol. {csl['volume']},"
+    if csl.get("issue"):
+        out += f" no. {csl['issue']},"
+    out += f" {year}"
+    if csl.get("page"):
+        out += f", pp. {csl['page']}"
+    out += "."
+    return _squish(out)
+
+
+def _chicago(csl):
+    t = _itype(csl)
+    A = _names_apa(csl.get("author", [])).rstrip(".")  # avoid "G.. 2015."
+    year, title = _year(csl), csl.get("title", "")
+    container = csl.get("container-title", "")
+    if t == "book":
+        out = f"{A}. {year}. *{title}*."
+        if csl.get("publisher"):
+            out += f" {csl['publisher']}."
+        return _squish(out)
+    if t == "chapter":
+        out = f'{A}. {year}. "{title}."'
+        if container:
+            out += f" In *{container}*"
+            out += f", {csl['page']}." if csl.get("page") else "."
+        if csl.get("publisher"):
+            out += f" {csl['publisher']}."
+        return _squish(out)
+    if t == "webpage":
+        out = f'{A}. {year}. "{title}."'
+        if container:
+            out += f" *{container}*."
+        if csl.get("URL"):
+            out += f" {csl['URL']}."
+        return _squish(out)
+    # article
+    out = f'{A}. {year}. "{title}."'
     if container:
         out += f" *{container}*"
         if csl.get("volume"):
@@ -207,9 +314,95 @@ def format_bibliography(csl: dict, style: str) -> str:
         if csl.get("page"):
             out += f": {csl['page']}"
         out += "."
-    if csl.get("publisher"):
-        out += f" {csl['publisher']}."
     return _squish(out)
+
+
+def _harvard(csl):
+    t = _itype(csl)
+    A = _names_harvard(csl.get("author", []))
+    year, title = _year(csl), csl.get("title", "")
+    container = csl.get("container-title", "")
+    if t == "book":
+        out = f"{A} ({year}) *{title}*."
+        if csl.get("publisher"):
+            out += f" {csl['publisher']}."
+        return _squish(out)
+    if t == "chapter":
+        out = f"{A} ({year}) '{title}',"
+        if container:
+            out += f" in *{container}*."
+        if csl.get("publisher"):
+            out += f" {csl['publisher']}"
+        if csl.get("page"):
+            out += f", pp. {csl['page']}"
+        out += "."
+        return _squish(out)
+    if t == "webpage":
+        out = f"{A} ({year}) *{title}*."
+        if csl.get("URL"):
+            out += f" Available at: {csl['URL']}."
+        return _squish(out)
+    # article
+    out = f"{A} ({year}) '{title}',"
+    if container:
+        out += f" *{container}*,"
+        if csl.get("volume"):
+            vi = csl["volume"] + (f"({csl['issue']})" if csl.get("issue") else "")
+            out += f" {vi},"
+        if csl.get("page"):
+            out += f" pp. {csl['page']}"
+    out += "."
+    return _squish(out)
+
+
+def _ieee(csl):
+    t = _itype(csl)
+    A = _names_ieee(csl.get("author", []))
+    year, title = _year(csl), csl.get("title", "")
+    container = csl.get("container-title", "")
+    lead = f"{A}, " if A else ""
+    if t == "book":
+        out = f"{lead}*{title}*."
+        if csl.get("publisher"):
+            out += f" {csl['publisher']},"
+        out += f" {year}."
+        return _squish(out)
+    if t == "chapter":
+        out = f'{lead}"{title},"'
+        if container:
+            out += f" in *{container}*."
+        if csl.get("publisher"):
+            out += f" {csl['publisher']},"
+        out += f" {year}"
+        if csl.get("page"):
+            out += f", pp. {csl['page']}"
+        out += "."
+        return _squish(out)
+    if t == "webpage":
+        out = f'{lead}"{title}." [Online].'
+        if csl.get("URL"):
+            out += f" Available: {csl['URL']}"
+        return _squish(out)
+    # article
+    out = f'{lead}"{title},"'
+    if container:
+        out += f" *{container}*,"
+        if csl.get("volume"):
+            out += f" vol. {csl['volume']},"
+        if csl.get("issue"):
+            out += f" no. {csl['issue']},"
+        if csl.get("page"):
+            out += f" pp. {csl['page']},"
+    out += f" {year}."
+    return _squish(out)
+
+
+_RENDERERS = {"apa": _apa, "mla": _mla, "chicago": _chicago,
+              "harvard": _harvard, "ieee": _ieee}
+
+
+def format_bibliography(csl: dict, style: str) -> str:
+    return _RENDERERS.get(style.lower(), _apa)(csl)
 
 
 def format_in_text(csl: dict, style: str) -> str:
@@ -217,12 +410,61 @@ def format_in_text(csl: dict, style: str) -> str:
     authors = csl.get("author", [])
     fam = authors[0]["family"] if authors else (csl.get("title", "")[:20])
     year = _year(csl)
+    if style == "ieee":
+        return "[#]"   # numbered style; cite_batch fills the position, e.g. [1]
     if style == "mla":
         page = csl.get("page", "").split("-")[0] if csl.get("page") else ""
         return f"({fam}{(' ' + page) if page else ''})"
     if style == "chicago":
         return f"({fam} {year})"
-    return f"({fam}, {year})"  # apa
+    return f"({fam}, {year})"  # apa, harvard
+
+
+# --- BibTeX export ------------------------------------------------------------
+
+_BIBTEX_TYPE = {"article": "article", "book": "book",
+                "chapter": "incollection", "webpage": "misc"}
+
+
+def _bibtex_authors(authors):
+    return " and ".join(
+        f"{a.get('family','')}, {a.get('given','')}".strip().rstrip(", ")
+        for a in authors) or ""
+
+
+def _bibtex_key(csl):
+    authors = csl.get("author", [])
+    fam = (authors[0]["family"] if authors else csl.get("title", "ref")) or "ref"
+    fam = re.sub(r"[^A-Za-z0-9]", "", fam) or "ref"
+    return f"{fam}{csl.get('issued') or ''}"
+
+
+def to_bibtex(csl: dict, key: str | None = None) -> str:
+    """A deterministic BibTeX entry derived from CSL-JSON (no style file needed)."""
+    t = _itype(csl)
+    entry = _BIBTEX_TYPE[t]
+    fields: list[tuple[str, str]] = []
+
+    def add(name, value):
+        if value:
+            fields.append((name, str(value)))
+
+    add("author", _bibtex_authors(csl.get("author", [])))
+    add("title", csl.get("title"))
+    if t in ("article",):
+        add("journal", csl.get("container-title"))
+    elif t == "chapter":
+        add("booktitle", csl.get("container-title"))
+    if csl.get("issued"):
+        add("year", csl["issued"])
+    add("volume", csl.get("volume"))
+    add("number", csl.get("issue"))
+    add("pages", (csl.get("page") or "").replace("-", "--") or None)
+    add("publisher", csl.get("publisher"))
+    add("doi", csl.get("DOI"))
+    add("url", csl.get("URL"))
+    body = ",\n".join(f"  {k} = {{{v}}}" for k, v in fields)
+    return f"@{entry}{{{key or _bibtex_key(csl)},\n{body}\n}}"
 
 
 # --- helpers ------------------------------------------------------------------
@@ -288,19 +530,32 @@ def cite_batch(inputs: list[str], style: str, http: HttpGet, *,
     """Resolve + format each input independently; one bad line is a per-line
     warning, not a failed batch. Returns per-input results + a combined,
     alphabetized bibliography."""
+    requested = style
     style = style.lower()
+    batch_warnings = []
     if style not in STYLES:
+        # Degrade explicitly — never substitute a style silently.
+        batch_warnings.append(
+            f"style {requested!r} is not bundled; rendered in APA instead "
+            f"(available: {', '.join(STYLES)}).")
         style = "apa"
     items = []
-    for raw in inputs:
+    for i, raw in enumerate(inputs):
         csl, resolver, warnings = resolve(raw, http, llm_parse)
-        entry = format_bibliography(csl, style)
         item = {"input": raw, "csl_json": csl, "resolver": resolver,
                 "warnings": warnings, "parsed_by": resolver}
         if "bibliography" in output:
-            item["bibliography_entry"] = entry
+            item["bibliography_entry"] = format_bibliography(csl, style)
         if "in_text" in output:
-            item["in_text"] = format_in_text(csl, style)
+            in_text = format_in_text(csl, style)
+            # Numbered styles cite by position in the list.
+            item["in_text"] = f"[{i + 1}]" if style == "ieee" else in_text
+        if "bibtex" in output:
+            item["bibtex"] = to_bibtex(csl)
         items.append(item)
     bib = sorted((it.get("bibliography_entry", "") for it in items), key=str.lower)
-    return {"style": style, "items": items, "bibliography": bib}
+    result = {"style": style, "items": items, "bibliography": bib,
+              "warnings": batch_warnings}
+    if "bibtex" in output:
+        result["bibtex"] = "\n\n".join(it.get("bibtex", "") for it in items)
+    return result
