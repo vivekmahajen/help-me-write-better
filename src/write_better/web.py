@@ -25,6 +25,7 @@ from .demo import RateLimiter, run_demo
 from .engine import Request, has_api_key, improve
 from .modes import MODES, resolve_services
 from .prompt import VALID_FORMATS, fold_sources
+from .context import normalize as normalize_context
 from . import localize
 from .samples import SAMPLES
 from .ui import PAGE
@@ -108,6 +109,8 @@ def _info() -> dict:
                 "voice_sample": "optional writing sample of yours to match your voice",
                 "texts": "optional array of drafts to combine (for the 'merge' service)",
                 "culture": "register id for 'localize-tone' (e.g. en-US-direct, en-GB-understated, en-formal-jp)",
+                "context": "optional long-form context: a string, or {text, role} with role "
+                           "preceding_manuscript | outline | style_reference",
                 "max_chars": "optional hard character limit (strict_limit guarantee)",
                 "max_words": "optional hard word limit (strict_limit guarantee)",
                 "model": "optional model id override",
@@ -219,6 +222,8 @@ def app(environ, start_response):
                              "code": "unknown_culture", "supported": localize.ids()})
         free_form = localize.augment(free_form, culture)
 
+    _ctx_text, _ctx_role = normalize_context(data.get("context"))
+
     if not has_api_key():
         return _respond(start_response, "503 Service Unavailable",
                         {"error": "ANTHROPIC_API_KEY is not configured on the server"})
@@ -236,6 +241,8 @@ def app(environ, start_response):
         free_form=free_form,
         model=data.get("model"),
         effort=data.get("effort", "high"),
+        context=_ctx_text or None,
+        context_role=_ctx_role,
         protected_terms=[str(t).strip() for t in (data.get("protected_terms") or [])
                          if str(t).strip()],
         voice_profile=render_voice_profile(data.get("voice_sample")),
@@ -259,4 +266,5 @@ def app(environ, start_response):
         },
         "length": {"chars": result.char_count, "words": result.word_count},
         "limit_met": result.limit_met,
+        "context_truncated": result.context_truncated,
     })

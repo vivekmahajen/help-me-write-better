@@ -47,6 +47,25 @@ def build_profile(samples: str) -> dict:
     return {"samples": samples, "fingerprint": fp, "descriptor": describe_fingerprint(fp)}
 
 
+def voice_drift(reference: str, sample: str) -> dict:
+    """A deterministic voice-drift signal between a reference (e.g. the preceding
+    manuscript) and new text, from :func:`realtime.style_fingerprint` metrics.
+    Returns metric deltas + a coarse verdict (low | medium | high)."""
+    a = style_fingerprint(reference or "")
+    b = style_fingerprint(sample or "")
+    deltas = {
+        "mean_sentence_len": round(
+            b["sentence_length"]["mean"] - a["sentence_length"]["mean"], 1),
+        "adverb_density": round(b["adverb_density"] - a["adverb_density"], 3),
+        "dialogue_ratio": round(b["dialogue_ratio"] - a["dialogue_ratio"], 3),
+    }
+    score = (abs(deltas["mean_sentence_len"]) / 8
+             + abs(deltas["adverb_density"]) * 20
+             + abs(deltas["dialogue_ratio"]) * 5)
+    verdict = "low" if score < 1 else "medium" if score < 2.5 else "high"
+    return {"deltas": deltas, "drift": verdict}
+
+
 def render_voice_profile(samples: str | None) -> str | None:
     """A VOICE PROFILE prompt block, or ``None`` when there's nothing usable."""
     samples = (samples or "").strip()

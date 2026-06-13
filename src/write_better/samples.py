@@ -221,4 +221,9 @@ SAMPLES: dict[str, str] = {
         "Hey — your invoice is three weeks late. I need it paid by Friday or we stop work. "
         "Let me know."
     ),
+    "continuity": (
+        "Mara gazed out at the calm water with her bright blue eyes and smiled. The sea had "
+        "always been her favorite place. \"Race you to the pier, Lucas!\" she called to her "
+        "brother."
+    ),
 }

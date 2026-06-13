@@ -22,6 +22,7 @@ from collections import Counter
 from urllib.parse import parse_qs
 
 from ..citation import cite_batch, default_http
+from ..context import normalize as normalize_context
 from ..engine import Request, improve as engine_improve
 from ..prompt import fold_sources
 from ..voice import build_profile as build_voice_profile, render_voice_profile
@@ -635,14 +636,10 @@ def _improve(store, engine, user, environ, start_response):
     vp = store.get_voice_profile(user["id"])
     voice_profile = render_voice_profile(vp["samples"]) if vp else None
 
-    # Long-form context — never silently truncate; warn + omit if over budget.
+    # Long-form context: typed {text, role} (or a plain string). The engine
+    # front-trims over-budget context and reports it via context_truncated.
     warnings = []
-    context = data.get("context")
-    if context and len(context) > CONTEXT_BUDGET_CHARS:
-        warnings.append(
-            f"context ({len(context)} chars) exceeds the {CONTEXT_BUDGET_CHARS}-char "
-            f"budget and was not applied — split the manuscript or trim it")
-        context = None
+    context_text, context_role = normalize_context(data.get("context"))
 
     req = Request(
         text=text,
@@ -658,7 +655,8 @@ def _improve(store, engine, user, environ, start_response):
         model=data.get("model"),
         effort=data.get("effort", "high"),
         style_guide=style_guide or None,
-        context=context or None,
+        context=context_text or None,
+        context_role=context_role,
         protected_terms=store.list_dictionary(user["id"]),
         voice_profile=voice_profile,
         max_chars=_pos_int(data.get("max_chars")),
@@ -690,6 +688,8 @@ def _improve(store, engine, user, environ, start_response):
         "length": {"chars": last.char_count, "words": last.word_count},
         "limit_met": last.limit_met,
     }
+    if last.context_truncated:
+        body["context_truncated"] = last.context_truncated
     if data.get("template"):
         body["template"] = data["template"]
         body["variants"] = outputs

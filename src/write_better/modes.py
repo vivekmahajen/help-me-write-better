@@ -362,6 +362,18 @@ _EXTENDED_MODES: tuple[Mode, ...] = (
              "or remove substance. If no CULTURE is given, say so and make no change. Return only "
              "the rewritten text."
          )),
+    Mode("continuity", "Flag contradictions between your draft and its context/canon.",
+         "standard", aliases=("continuity-check", "canon-check"),
+         instruction=(
+             "Compare the TEXT against the CONTEXT (the preceding manuscript / canon) and report "
+             "only CONTINUITY problems where the TEXT contradicts or drifts from the CONTEXT: (1) "
+             "character/place/proper-name changes or misspellings; (2) established-fact "
+             "contradictions (appearance, relationships, timeline, who-knows-what); (3) tense or "
+             "POV shifts; (4) voice/register drift. For each, quote the conflicting snippet from "
+             "the TEXT and the relevant CONTEXT detail, and suggest a fix. If no CONTEXT is "
+             "provided, say a continuity check needs the preceding text. Analysis only - do not "
+             "rewrite the passage."
+         )),
     Mode("score", "One-screen report card with sub-scores and top fixes.",
          "standard", aliases=("report-card", "grade"),
          instruction=(

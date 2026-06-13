@@ -82,7 +82,9 @@ def test_improve_passes_context_to_engine():
     assert "Mara fears the sea." in captured["context"]
 
 
-def test_over_budget_context_warns_and_is_omitted():
+def test_over_budget_context_is_passed_through_and_truncation_surfaced():
+    # PR-4 behavior change: the gateway no longer omits over-budget context; it
+    # passes it to the engine (which front-trims) and surfaces context_truncated.
     store = Store(":memory:")
     user = accounts.create_user(store, "a@b.com", "supersecret", plan="pro")
     token, _ = accounts.create_api_key(store, user["id"])
@@ -91,16 +93,16 @@ def test_over_budget_context_warns_and_is_omitted():
     def engine(req):
         captured["context"] = req.context
         return Result(text="ok", model="m", services=resolve_services(req.services),
-                      input_tokens=1, output_tokens=1)
+                      input_tokens=1, output_tokens=1,
+                      context_truncated={"kept_chars": 10, "dropped_chars": 5})
 
     app = make_gateway(store, engine=engine)
     big = "x" * (CONTEXT_BUDGET_CHARS + 1)
     status, data = _call(app, "/v1/improve", token,
                          {"text": "continue", "services": "write", "context": big})
     assert status.startswith("200")
-    assert captured["context"] is None                      # not applied (not truncated)
-    assert data["warnings"] and "budget" in data["warnings"][0]
-    assert str(CONTEXT_BUDGET_CHARS) in data["warnings"][0]  # budget number named
+    assert captured["context"] == big                       # passed through, not dropped
+    assert data["context_truncated"] == {"kept_chars": 10, "dropped_chars": 5}
 
 
 # --- fingerprint endpoint -----------------------------------------------------
