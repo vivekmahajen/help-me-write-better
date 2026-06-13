@@ -1,0 +1,21 @@
+id: wedding-toast
+name: Wedding toast
+category: everyday
+description: A warm, personal wedding speech or toast that actually lands.
+fields:
+  - { key: couple, label: "The couple (names)", type: text, required: true }
+  - { key: relationship, label: "Your relationship to them", type: text, required: true }
+  - { key: stories, label: "Memories / qualities to include", type: textarea, required: true }
+  - { key: length_pref, label: "Length", type: text, required: false, default: "about 2 minutes spoken" }
+  - { key: tone, label: "Tone", type: text, required: false, default: "heartfelt with light humor" }
+defaults: { service: write, format: plain }
+variants: 1
+prompt: |
+  Write a wedding toast for {couple}, given by their {relationship}.
+  Build it around these memories and qualities: {stories}.
+  Tone: {tone}. Length: {length_pref}. Open with a hook, tell one specific story
+  (not generic), turn to a sincere tribute to the couple and their relationship,
+  and end on a clear line the room can raise a glass to. Keep humor kind — no
+  roasting, no inside jokes that exclude the room — and keep it clean. Do NOT
+  invent stories or details not provided — use [bracketed placeholders] for
+  anything to personalize.

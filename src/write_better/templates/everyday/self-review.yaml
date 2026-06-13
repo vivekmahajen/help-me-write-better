@@ -1,0 +1,22 @@
+id: self-review
+name: Self-review
+category: everyday
+description: A confident, honest self-assessment for a performance cycle.
+fields:
+  - { key: role, label: "Your role", type: text, required: true }
+  - { key: period, label: "Review period", type: text, required: false }
+  - { key: accomplishments, label: "Your accomplishments & impact", type: textarea, required: true }
+  - { key: growth, label: "What you're working on / learned", type: textarea, required: false }
+  - { key: goals, label: "Goals for next period (optional)", type: textarea, required: false }
+  - { key: tone, label: "Tone", type: text, required: false, default: "confident but not boastful" }
+defaults: { service: write, format: plain, length: "around 300 words" }
+variants: 1
+prompt: |
+  Write a self-review for the role of {role}{{#period}} for {period}{{/period}}.
+  Accomplishments and impact: {accomplishments}.
+  {{#growth}}Growth and lessons: {growth}.{{/growth}}
+  {{#goals}}Goals for next period: {goals}.{{/goals}}
+  Tone: {tone}. Take credit for real impact with specifics and outcomes, own
+  growth areas honestly without self-deprecation, and connect the work to
+  team/company goals. Do NOT inflate or invent metrics, titles, or results not
+  provided — use [bracketed placeholders]. Structure: Impact, Growth, Goals.

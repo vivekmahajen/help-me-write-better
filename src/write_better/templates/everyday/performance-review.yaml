@@ -1,0 +1,24 @@
+id: performance-review
+name: Performance review (for a report)
+category: everyday
+description: A fair, specific, evidence-based performance review for someone on your team.
+fields:
+  - { key: name, label: "Person being reviewed", type: text, required: true }
+  - { key: period, label: "Review period", type: text, required: false }
+  - { key: strengths, label: "Strengths & wins (with examples)", type: textarea, required: true }
+  - { key: growth, label: "Areas to grow (with examples)", type: textarea, required: true }
+  - { key: goals, label: "Goals for next period (optional)", type: textarea, required: false }
+  - { key: tone, label: "Tone", type: text, required: false, default: "candid, fair, and supportive" }
+defaults: { service: write, format: plain, length: "around 350 words" }
+variants: 1
+prompt: |
+  Write a balanced performance review for {name}{{#period}} for {period}{{/period}}.
+  Strengths and wins: {strengths}.
+  Areas to grow: {growth}.
+  {{#goals}}Goals for next period: {goals}.{{/goals}}
+  Tone: {tone}. Be specific and evidence-based — tie every point to the examples
+  given. Lead with strengths, frame growth areas as actionable and
+  forward-looking (about behavior and outcomes, never personal character), and
+  avoid vague praise or harsh labels. Do NOT invent achievements, metrics, or
+  incidents not provided — use [bracketed placeholders]. Structure: Summary,
+  Strengths, Areas to grow, Goals.

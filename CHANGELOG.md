@@ -3,6 +3,13 @@
 ## Unreleased — Trust Layer
 
 ### Added
+- **Everyday templates → 16** (Gap-4 depth, PR-1): added `reference-request`,
+  `performance-review`, `self-review`, `wedding-toast`, `congratulations`,
+  `dispute-charge`, `rental-application`, `teacher-note`, and `dating-profile`.
+  Pure YAML (zero engine code); each prompt carries guardrails for its
+  emotionally-loaded context (no burned bridges, no clichés, no invented facts —
+  `[bracketed placeholders]` instead). A golden-fixture snapshot sweep asserts
+  every required field renders and conditionals resolve.
 - **Plagiarism detection** (Feature 1) and **AI-content detection** (Feature 2):
   external web-index scans via `POST /v1/scan` + `GET /v1/scans/{id}`, behind a
   vendor interface (Originality.ai default — see ADR-001). Idempotent content-hash

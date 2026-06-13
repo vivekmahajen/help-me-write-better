@@ -7,7 +7,43 @@ from write_better import templating as t
 EXPECTED = {
     "cover-letter", "complaint", "condolence", "resignation",
     "apology", "thank-you", "recommendation",
+    # Gap-4 depth additions:
+    "reference-request", "performance-review", "self-review", "wedding-toast",
+    "congratulations", "dispute-charge", "rental-application", "teacher-note",
+    "dating-profile",
 }
+
+# Golden seed inputs (required fields only) for the snapshot sweep. Distinctive
+# values so the assertions are meaningful.
+FIXTURES = {
+    "cover-letter": {"role": "Product Manager", "company": "Acme",
+                     "background": "8 years shipping B2B SaaS"},
+    "complaint": {"issue": "the laptop arrived cracked", "resolution": "a free replacement"},
+    "condolence": {"recipient": "Sam"},
+    "apology": {"what": "missing the deadline"},
+    "thank-you": {"reason": "the thoughtful housewarming gift"},
+    "recommendation": {"candidate": "Jordan Lee", "purpose": "a senior nurse role",
+                       "strengths": "calm under pressure, mentors juniors"},
+    "resignation": {"role": "Staff Engineer", "last_day": "June 30"},
+    "reference-request": {"person": "Dr. Okafor", "purpose": "a grad school application"},
+    "performance-review": {"name": "Priya", "strengths": "shipped the billing rewrite",
+                           "growth": "delegate more on small tasks"},
+    "self-review": {"role": "Designer", "accomplishments": "led the onboarding redesign"},
+    "wedding-toast": {"couple": "Mara and Ines", "relationship": "best friend",
+                      "stories": "the road trip where they got hopelessly lost"},
+    "congratulations": {"occasion": "the new baby"},
+    "dispute-charge": {"charge": "$49.99 on March 3 from CloudCo",
+                       "reason": "I cancelled in February", "resolution": "a full refund"},
+    "rental-application": {"property": "12 Birch Lane, Unit 4",
+                           "about": "a nurse with steady income and no pets"},
+    "teacher-note": {"purpose": "my daughter will miss Friday for a medical appointment"},
+    "dating-profile": {"about": "a climber and amateur baker who codes for fun"},
+}
+
+
+def test_everyday_count_meets_depth_bar():
+    everyday = t.list_templates("everyday")
+    assert len(everyday) >= 15, f"expected 15+ everyday templates, got {len(everyday)}"
 
 
 def test_everyday_templates_all_load():
@@ -18,6 +54,24 @@ def test_everyday_templates_all_load():
         assert tp.category == "everyday"
         assert tp.name and tp.description and tp.prompt
         assert tp.defaults.get("service") == "write"     # generative
+
+
+def test_every_everyday_template_has_a_fixture():
+    # Keep the golden sweep honest: a new template must bring a seed input.
+    assert EXPECTED <= set(FIXTURES)
+
+
+def test_snapshot_each_template_renders_required_fields():
+    for tid in EXPECTED:
+        tp = t.get_template(tid)
+        vals = FIXTURES[tid]
+        out = t.validate_and_render(tp, vals)
+        # every required field's value appears in the rendered prompt
+        for f in tp.fields:
+            if f.get("required"):
+                assert str(vals[f["key"]]) in out, f"{tid}: missing required {f['key']}"
+        # no unresolved {token} braces leak through for omitted optionals
+        assert "{{" not in out and "}}" not in out, f"{tid}: unrendered conditional"
 
 
 def test_everyday_category_filter():
