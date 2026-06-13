@@ -1,0 +1,22 @@
+id: facebook-ad
+name: Facebook / Instagram ad
+category: marketing
+description: Primary text, headline, and description for a Meta (Facebook/Instagram) ad.
+fields:
+  - { key: product, label: "Product / offer", type: text, required: true }
+  - { key: audience, label: "Target audience", type: text, required: false }
+  - { key: hook, label: "Angle / pain point to lead with", type: textarea, required: false }
+  - { key: cta, label: "CTA", type: text, required: false, default: "Shop now" }
+  - { key: tone, label: "Tone", type: text, required: false, default: "scroll-stopping but honest" }
+defaults: { service: write, format: plain }
+variants: 2
+prompt: |
+  Write a Facebook/Instagram ad for {product}.
+  {{#audience}}Audience: {audience}.{{/audience}}
+  {{#hook}}Lead angle: {hook}.{{/hook}}
+  CTA: {cta}. Tone: {tone}.
+  Provide: Primary text (a thumb-stopping first ~125 characters before "See more",
+  then 1-2 more lines), a Headline (at most 40 characters), and a short link
+  Description. One clear benefit, then the CTA. Honest — no fake scarcity or claims
+  the product can't back. Use ONLY provided details; mark claims to confirm
+  [verify]; leave [bracketed placeholders] for specifics. Offer 2 variants.

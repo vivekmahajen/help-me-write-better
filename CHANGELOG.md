@@ -3,6 +3,18 @@
 ## Unreleased — Trust Layer
 
 ### Added
+- **Marketing templates → 26** (Gap-4 depth, PR-2): added `cold-email-followup`,
+  `case-study`, `press-release`, `google-rsa`, `facebook-ad`, `x-thread`,
+  `youtube-metadata`, `launch-announcement`, `webinar-invite`,
+  `app-store-listing`, `job-posting`, `objection-faq`, `newsletter-intro`,
+  `pricing-copy`, `testimonial-polish`, and `value-prop`. The char-limited assets
+  (RSA, app-store) declare their platform limits in-prompt.
+- **`strict_limit` hard-length guarantee** (Gap-4 depth, PR-2): request flags
+  `max_chars` / `max_words` enforce a real cap — the engine checks the output,
+  regenerates up to twice with a tighter instruction, then deterministically
+  trims as a last resort and reports `limit_met: false` (never lies). New pure
+  `length.py` counters back both the engine and UI character counters. The
+  response gains `length: {chars, words}` and `limit_met` (open API + gateway).
 - **Everyday templates → 16** (Gap-4 depth, PR-1): added `reference-request`,
   `performance-review`, `self-review`, `wedding-toast`, `congratulations`,
   `dispute-charge`, `rental-application`, `teacher-note`, and `dating-profile`.

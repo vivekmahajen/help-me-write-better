@@ -65,6 +65,7 @@ def build_user_message(
     context: str | None = None,
     protected_terms: list[str] | None = None,
     voice_profile: str | None = None,
+    hard_limit: str | None = None,
 ) -> str:
     """Assemble the INPUTS block the engine expects, matching the operator contract."""
     services = ", ".join(service_names) if service_names else "(infer from the request)"
@@ -80,6 +81,8 @@ def build_user_message(
     ]
     if free_form:
         lines.append(f"REQUEST       = {free_form}")
+    if hard_limit:
+        lines.append(f"HARD LIMIT    = {hard_limit}")
 
     if protected_terms:
         lines.append("")

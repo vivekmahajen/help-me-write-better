@@ -1,0 +1,19 @@
+id: launch-announcement
+name: Launch announcement
+category: marketing
+description: An announcement post or email for a new product or feature.
+fields:
+  - { key: whats_new, label: "What's launching", type: textarea, required: true }
+  - { key: who_for, label: "Who it's for & the benefit", type: textarea, required: true }
+  - { key: cta, label: "CTA (try it, sign up, …)", type: text, required: false, default: "Try it today" }
+  - { key: channel, label: "Channel (email, blog, social)", type: text, required: false, default: "email" }
+  - { key: tone, label: "Tone", type: text, required: false, default: "excited but clear" }
+defaults: { service: write, format: plain }
+variants: 1
+prompt: |
+  Write a launch announcement ({channel}) for: {whats_new}.
+  Who it's for and why it matters: {who_for}.
+  CTA: {cta}. Tone: {tone}. Lead with the benefit (not the feature list), explain
+  what's new and why it helps, and end with a single clear CTA. Keep the hype
+  honest — no claims the product can't back. Use ONLY provided details; mark
+  anything to confirm [verify]; leave [bracketed placeholders] for specifics.

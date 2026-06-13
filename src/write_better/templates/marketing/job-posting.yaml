@@ -1,0 +1,23 @@
+id: job-posting
+name: Job posting
+category: marketing
+description: An attractive, inclusive job description that draws strong applicants.
+fields:
+  - { key: role, label: "Role title", type: text, required: true }
+  - { key: company, label: "Company & mission", type: textarea, required: true }
+  - { key: responsibilities, label: "What they'll do", type: textarea, required: true }
+  - { key: requirements, label: "Must-haves & nice-to-haves", type: textarea, required: false }
+  - { key: logistics, label: "Location, comp, perks (optional)", type: textarea, required: false }
+defaults: { service: write, format: markdown }
+variants: 1
+prompt: |
+  Write a job posting for the role of {role}.
+  Company & mission: {company}.
+  Responsibilities: {responsibilities}.
+  {{#requirements}}Requirements: {requirements}.{{/requirements}}
+  {{#logistics}}Logistics: {logistics}.{{/logistics}}
+  Structure: a compelling intro (why this role and company), What you'll do, What
+  we're looking for (separate must-haves from nice-to-haves to widen the funnel),
+  and logistics. Inclusive and jargon-light — no "rockstar/ninja" language or
+  endless requirement lists. Use ONLY provided details — use [bracketed
+  placeholders] for comp/location/benefits not given.

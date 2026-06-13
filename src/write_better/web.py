@@ -44,6 +44,15 @@ def _client_ip(environ) -> str:
     return environ.get("REMOTE_ADDR", "unknown")
 
 
+def _pos_int(value):
+    """A positive int, or None for missing/blank/invalid input (strict_limit)."""
+    try:
+        n = int(value)
+    except (TypeError, ValueError):
+        return None
+    return n if n > 0 else None
+
+
 def _html(start_response, status: str, html: str):
     body = html.encode("utf-8")
     start_response(status, [
@@ -96,6 +105,8 @@ def _info() -> dict:
                 "request": "optional free-form instruction",
                 "protected_terms": "optional list of words to never flag or change",
                 "voice_sample": "optional writing sample of yours to match your voice",
+                "max_chars": "optional hard character limit (strict_limit guarantee)",
+                "max_words": "optional hard word limit (strict_limit guarantee)",
                 "model": "optional model id override",
                 "effort": "low | medium | high | max; default: high",
             },
@@ -210,6 +221,8 @@ def app(environ, start_response):
         protected_terms=[str(t).strip() for t in (data.get("protected_terms") or [])
                          if str(t).strip()],
         voice_profile=render_voice_profile(data.get("voice_sample")),
+        max_chars=_pos_int(data.get("max_chars")),
+        max_words=_pos_int(data.get("max_words")),
     )
 
     try:
@@ -226,4 +239,6 @@ def app(environ, start_response):
             "input_tokens": result.input_tokens,
             "output_tokens": result.output_tokens,
         },
+        "length": {"chars": result.char_count, "words": result.word_count},
+        "limit_met": result.limit_met,
     })

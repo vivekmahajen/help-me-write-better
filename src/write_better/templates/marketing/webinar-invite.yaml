@@ -1,0 +1,22 @@
+id: webinar-invite
+name: Webinar invitation
+category: marketing
+description: An invite that drives registrations for a webinar or event.
+fields:
+  - { key: topic, label: "Webinar topic & takeaways", type: textarea, required: true }
+  - { key: speaker, label: "Speaker(s) & credibility", type: text, required: false }
+  - { key: when, label: "Date / time", type: text, required: false }
+  - { key: audience, label: "Who should attend", type: text, required: false }
+  - { key: cta, label: "CTA", type: text, required: false, default: "Save your spot" }
+defaults: { service: write, format: plain }
+variants: 1
+prompt: |
+  Write a webinar invitation. Topic and takeaways: {topic}.
+  {{#speaker}}Speaker(s): {speaker}.{{/speaker}}
+  {{#when}}When: {when}.{{/when}}
+  {{#audience}}Who should attend: {audience}.{{/audience}}
+  CTA: {cta}. Provide a subject line and body. Lead with the concrete takeaways
+  (what they'll learn or be able to do), establish speaker credibility, state the
+  logistics, and drive to register with the CTA. Honest value, no overpromising.
+  Use ONLY provided details — use [bracketed placeholders] for date/time/links not
+  given.

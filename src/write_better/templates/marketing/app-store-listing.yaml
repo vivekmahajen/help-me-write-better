@@ -1,0 +1,20 @@
+id: app-store-listing
+name: App store listing
+category: marketing
+description: Title, subtitle, and description for the App Store / Play Store, within limits.
+fields:
+  - { key: app, label: "App name & what it does", type: textarea, required: true }
+  - { key: features, label: "Key features & benefits", type: textarea, required: true }
+  - { key: keywords, label: "Keywords (optional)", type: text, required: false }
+defaults: { service: write, format: plain }
+variants: 1
+prompt: |
+  Write an app store listing for: {app}.
+  Key features / benefits: {features}.
+  {{#keywords}}Work in keywords naturally: {keywords}.{{/keywords}}
+  Produce: a Title (at most 30 characters), a Subtitle (at most 30 characters), a
+  promotional text line (at most 170 characters), and a full Description that opens
+  with a strong benefit-led first three lines (shown before "more"), then scannable
+  feature bullets, then a short closer. Put the character count in [brackets] after
+  the title and subtitle. Use ONLY provided details — do NOT invent features,
+  ratings, or awards; mark claims to confirm [verify].

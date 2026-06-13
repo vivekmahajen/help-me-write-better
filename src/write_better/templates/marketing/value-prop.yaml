@@ -1,0 +1,20 @@
+id: value-prop
+name: Value proposition
+category: marketing
+description: A sharp value proposition — who it's for, what it does, why it's better.
+fields:
+  - { key: product, label: "Product / service", type: text, required: true }
+  - { key: audience, label: "Target customer", type: text, required: true }
+  - { key: benefit, label: "Main benefit / outcome", type: textarea, required: true }
+  - { key: differentiator, label: "What makes it different (optional)", type: textarea, required: false }
+defaults: { service: write, format: plain, length: short }
+variants: 3
+prompt: |
+  Write a value proposition for {product}, aimed at {audience}.
+  Main benefit / outcome: {benefit}.
+  {{#differentiator}}What makes it different: {differentiator}.{{/differentiator}}
+  Produce a crisp headline-style value prop (one sentence), a supporting line, and
+  3 distinct variations on different angles (outcome, pain relief, contrast).
+  Concrete and credible — no vague buzzwords ("revolutionary", "world-class") or
+  claims the product can't back. Use ONLY provided details; mark anything to
+  confirm [verify].

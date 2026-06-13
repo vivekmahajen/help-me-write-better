@@ -1,0 +1,22 @@
+id: google-rsa
+name: Google Responsive Search Ad
+category: marketing
+description: RSA assets — 15 headlines and 4 descriptions, within Google's character limits.
+fields:
+  - { key: product, label: "Product / service", type: text, required: true }
+  - { key: benefits, label: "Key benefits & offers", type: textarea, required: true }
+  - { key: keywords, label: "Target keywords (optional)", type: text, required: false }
+  - { key: cta, label: "Primary CTA", type: text, required: false, default: "Get started" }
+defaults: { service: write, format: plain }
+variants: 1
+prompt: |
+  Write Google Responsive Search Ad assets for {product}.
+  Benefits / offers: {benefits}.
+  {{#keywords}}Work in these keywords naturally: {keywords}.{{/keywords}}
+  Primary CTA: {cta}.
+  Produce EXACTLY 15 distinct headlines (each at most 30 characters — a hard
+  Google limit; count every character including spaces) and 4 descriptions (each at
+  most 90 characters). Number them and put the character count in [brackets] after
+  each. Vary the angle (benefit, offer, urgency, trust, feature, question). No
+  exclamation overload, no unverifiable superlatives. Use ONLY provided details —
+  do NOT invent claims, prices, or guarantees; mark anything to confirm [verify].

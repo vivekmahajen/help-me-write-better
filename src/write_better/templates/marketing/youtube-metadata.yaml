@@ -1,0 +1,19 @@
+id: youtube-metadata
+name: YouTube title + description
+category: marketing
+description: Click-worthy titles and a structured video description.
+fields:
+  - { key: video, label: "What the video is about", type: textarea, required: true }
+  - { key: keywords, label: "Search keywords (optional)", type: text, required: false }
+  - { key: links, label: "Links / resources to include", type: textarea, required: false }
+defaults: { service: write, format: plain }
+variants: 1
+prompt: |
+  Write YouTube metadata for a video about: {video}.
+  {{#keywords}}Target keywords: {keywords}.{{/keywords}}
+  Produce: 5 title options (each at most 60 characters — curiosity plus clarity, no
+  clickbait the video can't pay off), then a description with a compelling first two
+  lines (shown before "more"), a short summary, a [timestamps] placeholder,
+  {{#links}}these links: {links}{{/links}}{{^links}}a [links] section{{/links}}, and
+  a few relevant tags. Use ONLY provided details; leave [bracketed placeholders]
+  for specifics not given.

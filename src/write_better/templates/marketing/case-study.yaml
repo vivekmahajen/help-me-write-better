@@ -1,0 +1,22 @@
+id: case-study
+name: Case study skeleton
+category: marketing
+description: A structured customer case study from the facts you provide.
+fields:
+  - { key: customer, label: "Customer / company", type: text, required: true }
+  - { key: problem, label: "Their problem / situation", type: textarea, required: true }
+  - { key: solution, label: "What they did with your product", type: textarea, required: true }
+  - { key: results, label: "Results (metrics if any)", type: textarea, required: false }
+  - { key: tone, label: "Tone", type: text, required: false, default: "credible and specific" }
+defaults: { service: write, format: markdown, length: "around 500 words" }
+variants: 1
+prompt: |
+  Write a customer case study for {customer}.
+  Challenge / situation: {problem}.
+  Solution (how they used the product): {solution}.
+  {{#results}}Results: {results}.{{/results}}
+  Tone: {tone}. Structure: Headline, an at-a-glance results box, Challenge,
+  Solution, Results, and a pull-quote placeholder ("[customer quote]"). Be concrete
+  and credible. Use ONLY the facts provided — do NOT invent metrics, quotes, names,
+  or outcomes; mark any number that needs confirming as [verify] and leave
+  [bracketed placeholders] for missing specifics.

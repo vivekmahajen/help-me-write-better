@@ -1,0 +1,19 @@
+id: pricing-copy
+name: Pricing page copy
+category: marketing
+description: Clear plan names, value lines, and benefit-framed features for a pricing page.
+fields:
+  - { key: plans, label: "Plans & prices", type: textarea, required: true }
+  - { key: audience, label: "Who each plan is for", type: textarea, required: false }
+  - { key: features, label: "Key features per plan", type: textarea, required: false }
+defaults: { service: write, format: markdown }
+variants: 1
+prompt: |
+  Write pricing-page copy for these plans: {plans}.
+  {{#audience}}Who each is for: {audience}.{{/audience}}
+  {{#features}}Key features: {features}.{{/features}}
+  For each plan: a clear name, a one-line "best for" value statement, the price, and
+  benefit-framed feature lines (outcomes, not just specs). Add a short reassurance
+  line (e.g., cancel anytime / no card) ONLY if supported by the provided details.
+  Be honest and concrete — do NOT invent prices, limits, or features; use
+  [bracketed placeholders] for anything not given.
