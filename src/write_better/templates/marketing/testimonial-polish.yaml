@@ -1,0 +1,16 @@
+id: testimonial-polish
+name: Testimonial polish
+category: marketing
+description: Tighten a raw customer quote without changing its meaning or voice.
+fields:
+  - { key: raw, label: "The raw testimonial / feedback", type: textarea, required: true }
+  - { key: focus, label: "Angle to emphasize (optional)", type: text, required: false }
+defaults: { service: write, format: plain, length: short }
+variants: 1
+prompt: |
+  Polish this raw customer testimonial into a clean, usable quote: {raw}.
+  {{#focus}}Emphasize this angle if the source supports it: {focus}.{{/focus}}
+  Tighten grammar and flow and trim filler while keeping the customer's voice,
+  meaning, and specifics EXACTLY — do NOT add praise, claims, or results they did
+  not say, and do NOT fabricate a name or title. Offer a short and a slightly
+  longer version, plus a [Name, Title / Company] attribution placeholder.

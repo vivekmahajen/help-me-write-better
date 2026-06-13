@@ -12,6 +12,7 @@ from dataclasses import dataclass, field
 
 from .modes import Mode, resolve_services
 from .prompt import build_user_message, system_prompt
+from . import length
 
 # Model IDs are the current Claude models (see README for the routing rationale).
 PREMIUM_MODEL = "claude-opus-4-8"     # WRITE, high-stakes REWRITE
@@ -46,6 +47,8 @@ class Request:
     context: str | None = None      # preceding manuscript for long-form consistency
     protected_terms: list[str] = field(default_factory=list)  # personal "never-flag" dictionary
     voice_profile: str | None = None  # rendered personal voice profile ("sounds like me")
+    max_chars: int | None = None    # strict_limit: hard character cap on the output
+    max_words: int | None = None    # strict_limit: hard word cap on the output
 
 
 @dataclass
@@ -57,6 +60,9 @@ class Result:
     services: list[Mode]
     input_tokens: int = 0
     output_tokens: int = 0
+    limit_met: bool | None = None   # None = no limit asked; True/False = strict_limit outcome
+    char_count: int = 0
+    word_count: int = 0
 
 
 def route_model(modes: list[Mode]) -> str:
@@ -75,7 +81,17 @@ def route_model(modes: list[Mode]) -> str:
     return ROUTINE_MODEL
 
 
-def _build_call_kwargs(req: Request, modes: list[Mode], model: str) -> dict:
+def _limit_phrase(req: Request) -> str:
+    parts = []
+    if req.max_chars is not None:
+        parts.append(f"{req.max_chars} characters")
+    if req.max_words is not None:
+        parts.append(f"{req.max_words} words")
+    return " and ".join(parts)
+
+
+def _build_call_kwargs(req: Request, modes: list[Mode], model: str,
+                       hard_limit: str | None = None) -> dict:
     kwargs: dict = {
         "model": model,
         "max_tokens": _MAX_TOKENS,
@@ -101,6 +117,7 @@ def _build_call_kwargs(req: Request, modes: list[Mode], model: str) -> dict:
                     context=req.context,
                     protected_terms=req.protected_terms,
                     voice_profile=req.voice_profile,
+                    hard_limit=hard_limit,
                 ),
             }
         ],
@@ -128,23 +145,62 @@ def improve(req: Request, *, client=None, stream_to=None) -> Result:
 
         client = anthropic.Anthropic()
 
-    kwargs = _build_call_kwargs(req, modes, model)
+    limited = req.max_chars is not None or req.max_words is not None
+    # When enforcing a hard limit we may regenerate, so we can't stream a result
+    # we might discard; fall back to a buffered call and emit the final text once.
+    use_stream = stream_to is not None and not limited
 
-    if stream_to is not None:
-        with client.messages.stream(**kwargs) as stream:
-            for text in stream.text_stream:
-                stream_to(text)
-            message = stream.get_final_message()
-    else:
-        message = client.messages.create(**kwargs)
+    def _msg_text(message) -> str:
+        return "".join(b.text for b in message.content if b.type == "text")
 
-    text = "".join(block.text for block in message.content if block.type == "text")
+    def _call(hard_limit: str | None):
+        kwargs = _build_call_kwargs(req, modes, model, hard_limit=hard_limit)
+        if use_stream:
+            with client.messages.stream(**kwargs) as stream:
+                for chunk in stream.text_stream:
+                    stream_to(chunk)
+                return stream.get_final_message()
+        return client.messages.create(**kwargs)
+
+    phrase = _limit_phrase(req)
+    first_hint = (f"The result MUST be at most {phrase}. Count carefully and do not "
+                  f"exceed it.") if limited else None
+    message = _call(first_hint)
+    text = _msg_text(message)
+    in_tokens = getattr(message.usage, "input_tokens", 0)
+    out_tokens = getattr(message.usage, "output_tokens", 0)
+
+    limit_met: bool | None = None
+    if limited:
+        attempts = 0
+        while not length.within_limit(text, req.max_chars, req.max_words) and attempts < 2:
+            attempts += 1
+            retry_hint = (
+                f"Your previous attempt was {length.count_chars(text)} characters / "
+                f"{length.count_words(text)} words, over the limit. The result MUST be "
+                f"at most {phrase}. Rewrite it shorter to fit, keeping the essential meaning.")
+            message = _call(retry_hint)
+            text = _msg_text(message)
+            in_tokens += getattr(message.usage, "input_tokens", 0)
+            out_tokens += getattr(message.usage, "output_tokens", 0)
+        limit_met = length.within_limit(text, req.max_chars, req.max_words)
+        if not limit_met:
+            # Last resort: deterministically trim so the output truly fits, but
+            # report limit_met=False so the caller knows it was hard-truncated.
+            text = length.trim_to_limit(text, req.max_chars, req.max_words)
+
+    if stream_to is not None and not use_stream:
+        stream_to(text)  # ensure CLIs/UIs that only read the stream still see output
+
     return Result(
         text=text,
         model=model,
         services=modes,
-        input_tokens=getattr(message.usage, "input_tokens", 0),
-        output_tokens=getattr(message.usage, "output_tokens", 0),
+        input_tokens=in_tokens,
+        output_tokens=out_tokens,
+        limit_met=limit_met,
+        char_count=length.count_chars(text),
+        word_count=length.count_words(text),
     )
 
 

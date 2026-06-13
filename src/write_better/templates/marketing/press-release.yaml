@@ -1,0 +1,21 @@
+id: press-release
+name: Press release
+category: marketing
+description: A standard-format press release for an announcement.
+fields:
+  - { key: announcement, label: "What you're announcing", type: textarea, required: true }
+  - { key: company, label: "Company (and one-line description)", type: text, required: true }
+  - { key: details, label: "Key details (date, who, why it matters)", type: textarea, required: false }
+  - { key: quote_from, label: "Who gives the quote (name, title)", type: text, required: false }
+defaults: { service: write, format: plain, length: "around 400 words" }
+variants: 1
+prompt: |
+  Write a press release announcing: {announcement}.
+  Company: {company}.
+  {{#details}}Key details: {details}.{{/details}}
+  Standard format: FOR IMMEDIATE RELEASE, a dateline ([CITY, Date]), a strong
+  headline and subhead, an inverted-pyramid lead, supporting paragraphs, a quote
+  {{#quote_from}}from {quote_from}{{/quote_from}}{{^quote_from}}from [spokesperson, title]{{/quote_from}},
+  a boilerplate "About" paragraph, and "###" to end. Newswire-neutral, third
+  person. Use ONLY provided facts — do NOT invent quotes, metrics, dates, or
+  partners; use [bracketed placeholders] and mark unverified claims [verify].

@@ -1,0 +1,17 @@
+id: newsletter-intro
+name: Newsletter intro
+category: marketing
+description: A short, warm opening that gets the newsletter read.
+fields:
+  - { key: contents, label: "What's in this issue", type: textarea, required: true }
+  - { key: hook, label: "A timely hook / theme (optional)", type: textarea, required: false }
+  - { key: voice, label: "Brand voice", type: text, required: false, default: "warm and personable" }
+defaults: { service: write, format: plain, length: short }
+variants: 2
+prompt: |
+  Write a newsletter intro. This issue covers: {contents}.
+  {{#hook}}Open on this hook/theme: {hook}.{{/hook}}
+  Voice: {voice}. Hook the reader in the first line, give a reason to keep reading,
+  and tee up the contents naturally (not a dry table of contents). Keep it short
+  and human. Use ONLY provided details; leave [bracketed placeholders] for links or
+  specifics not given. Offer 2 variants.

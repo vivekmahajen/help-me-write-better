@@ -1,0 +1,23 @@
+id: cold-email-followup
+name: Cold email follow-up sequence
+category: marketing
+description: A polite 3-touch follow-up sequence to a cold outreach email.
+fields:
+  - { key: recipient, label: "Who / role you're emailing", type: text, required: true }
+  - { key: offer, label: "What you offer & the value", type: textarea, required: true }
+  - { key: first_email, label: "Your original email (summary)", type: textarea, required: false }
+  - { key: cta, label: "The ask / CTA", type: text, required: false, default: "a quick 15-minute call" }
+  - { key: tone, label: "Tone", type: text, required: false, default: "friendly, brief, low-pressure" }
+defaults: { service: write, format: plain }
+variants: 1
+prompt: |
+  Write a 3-touch cold-email follow-up sequence to {recipient}.
+  Offer / value: {offer}.
+  {{#first_email}}Original email summary: {first_email}.{{/first_email}}
+  CTA: {cta}. Tone: {tone}.
+  Produce three short, separately-labeled emails (Follow-up 1 ~3 days, Follow-up 2
+  ~1 week, Follow-up 3 / breakup ~2 weeks). Each adds a NEW angle or piece of value
+  (never "just bumping this"), stays under ~90 words, and makes it easy to say no;
+  the last is a graceful breakup. Use ONLY the provided offer details — do not
+  invent features, results, names, or case studies; mark anything to confirm
+  [verify] and leave [bracketed placeholders] for specifics not given.

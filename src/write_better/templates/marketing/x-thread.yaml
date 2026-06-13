@@ -1,0 +1,20 @@
+id: x-thread
+name: X (Twitter) thread
+category: marketing
+description: A hooky, value-packed thread on a topic.
+fields:
+  - { key: topic, label: "Topic / argument", type: textarea, required: true }
+  - { key: takeaways, label: "Key points to cover", type: textarea, required: true }
+  - { key: cta, label: "Ending CTA (follow, link, …)", type: text, required: false }
+  - { key: tone, label: "Tone", type: text, required: false, default: "punchy and useful" }
+defaults: { service: write, format: plain }
+variants: 1
+prompt: |
+  Write an X (Twitter) thread about: {topic}.
+  Key points: {takeaways}.
+  {{#cta}}End with this CTA: {cta}.{{/cta}}
+  Tone: {tone}. Number each post and keep each at most 280 characters. Post 1 is a
+  strong hook that earns the read (no clickbait the thread can't deliver); the
+  middle posts deliver concrete value one idea at a time; the last recaps and adds
+  the CTA. No hashtag spam. Use ONLY provided substance — do NOT invent stats or
+  quotes; mark any figure [verify].

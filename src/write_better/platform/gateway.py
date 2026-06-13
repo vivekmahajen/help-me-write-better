@@ -73,6 +73,15 @@ def _bearer(environ) -> str | None:
     return environ.get("HTTP_X_API_KEY") or None
 
 
+def _pos_int(value):
+    """A positive int, or None for missing/blank/invalid (strict_limit caps)."""
+    try:
+        n = int(value)
+    except (TypeError, ValueError):
+        return None
+    return n if n > 0 else None
+
+
 def _read_json(environ) -> tuple[dict | None, str | None]:
     try:
         length = int(environ.get("CONTENT_LENGTH") or 0)
@@ -635,6 +644,8 @@ def _improve(store, engine, user, environ, start_response):
         context=context or None,
         protected_terms=store.list_dictionary(user["id"]),
         voice_profile=voice_profile,
+        max_chars=_pos_int(data.get("max_chars")),
+        max_words=_pos_int(data.get("max_words")),
     )
 
     outputs, last = [], None
@@ -659,6 +670,8 @@ def _improve(store, engine, user, environ, start_response):
         "services": [m.name for m in last.services],
         "usage": {"input_tokens": in_tokens, "output_tokens": out_tokens},
         "quota": metering.quota(store, user),
+        "length": {"chars": last.char_count, "words": last.word_count},
+        "limit_met": last.limit_met,
     }
     if data.get("template"):
         body["template"] = data["template"]

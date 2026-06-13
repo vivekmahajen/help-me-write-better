@@ -1,0 +1,19 @@
+id: objection-faq
+name: Objection-handling FAQ
+category: marketing
+description: An FAQ that addresses the real objections blocking a purchase.
+fields:
+  - { key: product, label: "Product / offer", type: text, required: true }
+  - { key: objections, label: "Known objections / hesitations", type: textarea, required: true }
+  - { key: proof, label: "Proof points / policies (guarantee, security…)", type: textarea, required: false }
+  - { key: tone, label: "Tone", type: text, required: false, default: "honest and reassuring" }
+defaults: { service: write, format: markdown }
+variants: 1
+prompt: |
+  Write an objection-handling FAQ for {product}.
+  Objections to address: {objections}.
+  {{#proof}}Proof points / policies you can cite: {proof}.{{/proof}}
+  Tone: {tone}. For each objection, write a clear question and an honest, specific
+  answer that reframes the concern and points to real proof — never dismissive,
+  never overpromising. Use ONLY provided proof points — do NOT invent guarantees,
+  certifications, or stats; mark anything to confirm [verify]. 6-10 Q&As.
