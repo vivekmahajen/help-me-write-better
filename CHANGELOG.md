@@ -3,6 +3,14 @@
 ## Unreleased — Trust Layer
 
 ### Added
+- **Template gallery in the editor**: a "Templates" panel in `/app` that lists
+  the library, renders each template's fields as a dynamic form, and runs it —
+  via session-authed `GET /account/templates` + `POST /account/templates/run`
+  (signed-in users, **no API key needed**). Missing required fields return a 422
+  that drives inline validation. Falls back gracefully (hidden) on the keyless
+  engine-only deploy. This makes the templates testable in the browser on the
+  deployed platform — previously they were reachable only via the authed `/v1`
+  API with an admin-minted key.
 - **Gap-4 cross-cutting sweep** (PR-7): feature-adoption analytics events
   `merge_run`, `argument_check_run`, `goal_set`, and `cite_style {style}` wired
   through the usage pipeline (alongside the existing `template_used` /
