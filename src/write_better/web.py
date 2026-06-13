@@ -24,7 +24,8 @@ from . import landing
 from .demo import RateLimiter, run_demo
 from .engine import Request, has_api_key, improve
 from .modes import MODES, resolve_services
-from .prompt import VALID_FORMATS
+from .prompt import VALID_FORMATS, fold_sources
+from . import localize
 from .samples import SAMPLES
 from .ui import PAGE
 from .voice import render_voice_profile
@@ -105,6 +106,8 @@ def _info() -> dict:
                 "request": "optional free-form instruction",
                 "protected_terms": "optional list of words to never flag or change",
                 "voice_sample": "optional writing sample of yours to match your voice",
+                "texts": "optional array of drafts to combine (for the 'merge' service)",
+                "culture": "register id for 'localize-tone' (e.g. en-US-direct, en-GB-understated, en-formal-jp)",
                 "max_chars": "optional hard character limit (strict_limit guarantee)",
                 "max_words": "optional hard word limit (strict_limit guarantee)",
                 "model": "optional model id override",
@@ -186,7 +189,12 @@ def app(environ, start_response):
                           key_present=has_api_key())
         return _respond(start_response, "200 OK", result.payload())
 
-    text = (data.get("text") or "").strip()
+    # `merge` accepts a `texts` array; fold it into one delimited TEXT.
+    texts = data.get("texts")
+    if isinstance(texts, list) and any(str(t).strip() for t in texts):
+        text = fold_sources(texts)
+    else:
+        text = (data.get("text") or "").strip()
     if not text:
         return _respond(start_response, "400 Bad Request", {"error": "'text' is required"})
 
@@ -200,6 +208,16 @@ def app(environ, start_response):
         services = resolve_services(data.get("services") or "clarify")
     except ValueError as exc:
         return _respond(start_response, "400 Bad Request", {"error": str(exc)})
+
+    # `localize-tone` requires a supported `culture`; unknown -> 422 with the list.
+    free_form = data.get("request")
+    if any(m.name == "localize-tone" for m in services):
+        culture = data.get("culture")
+        if not localize.is_supported(culture):
+            return _respond(start_response, "422 Unprocessable Entity",
+                            {"error": f"unknown culture {culture!r}",
+                             "code": "unknown_culture", "supported": localize.ids()})
+        free_form = localize.augment(free_form, culture)
 
     if not has_api_key():
         return _respond(start_response, "503 Service Unavailable",
@@ -215,7 +233,7 @@ def app(environ, start_response):
         length=data.get("length"),
         reading_level=data.get("reading_level"),
         language=data.get("language"),
-        free_form=data.get("request"),
+        free_form=free_form,
         model=data.get("model"),
         effort=data.get("effort", "high"),
         protected_terms=[str(t).strip() for t in (data.get("protected_terms") or [])

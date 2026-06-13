@@ -3,6 +3,16 @@
 ## Unreleased — Trust Layer
 
 ### Added
+- **Four new services** (Gap-4 depth, PR-5): `merge` (premium — combine drafts
+  into one document with a kept/dropped/merged decision log; conflicting facts
+  flagged, never silently resolved; accepts a `texts: []` array folded into
+  delimited sources), `wordfinder` (routine — reverse dictionary + in-context
+  synonyms with register tags), `argument-check` (premium — thesis → claim
+  support map → missing counterarguments → verdict, with a "structural read, not
+  a fact-check" honesty note), and `localize-tone` (standard — shift writing into
+  a cultural communication register; launch set `en-US-direct` /
+  `en-GB-understated` / `en-formal-jp`; unknown `culture` → 422 listing the
+  supported ids). Services count 40 → 44.
 - **Citations: 3 → 5 styles, type-aware, + BibTeX** (Gap-4 depth, PR-3): a pure-
   Python CSL-subset renderer over the existing CSL-JSON pipeline — APA, MLA,
   Chicago, Harvard, IEEE, each correct across four item types (article, book,
