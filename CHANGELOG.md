@@ -3,6 +3,15 @@
 ## Unreleased — Trust Layer
 
 ### Added
+- **Gap-4 cross-cutting sweep** (PR-7): feature-adoption analytics events
+  `merge_run`, `argument_check_run`, `goal_set`, and `cite_style {style}` wired
+  through the usage pipeline (alongside the existing `template_used` /
+  `weekly_email_sent`). Landing trust copy now lists APA/MLA/Chicago/Harvard/IEEE;
+  `docs/comparison.md` refreshed (**35 Full / 2 Partial**, with the honesty notes
+  for citation degradation, register-not-consultation, and never-lie length
+  caps); `docs/features/{citations,templates}.md` updated. `merge` and
+  `argument-check` are premium-tier, so they're already gated by the premium cap
+  (no extra `plans.py` change).
 - **Platform strays** (Gap-4 depth, PR-6): **snippets** (`snippets` table +
   `GET/POST/DELETE /v1/snippets` with trigger validation; CLI `write-better
   snippets add|list|rm` over a local file — expansion is client-side, the engine

@@ -76,7 +76,7 @@ def _trust_html(flags: dict) -> str:
         '<div class="wrap"><h2>Check before you ship</h2>'
         "<p>Originality and AI-likelihood checks — reported as a confidence band "
         "with the limits stated, never a binary verdict — plus citation "
-        'formatting in APA, MLA, and Chicago. '
+        'formatting in APA, MLA, Chicago, Harvard, and IEEE. '
         '<a href="/app">Open the tools.</a></p></div></section>'
     )
 
