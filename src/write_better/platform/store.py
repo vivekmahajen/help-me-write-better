@@ -161,6 +161,18 @@ CREATE TABLE IF NOT EXISTS voice_profiles (
     updated_at INTEGER NOT NULL
 );
 
+-- Text snippets: per-user trigger -> body expansions (client-side; the engine
+-- never sees snippet state). One body per (user, trigger).
+CREATE TABLE IF NOT EXISTS snippets (
+    id         INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id    INTEGER NOT NULL REFERENCES users(id),
+    trigger    TEXT NOT NULL,
+    body       TEXT NOT NULL,
+    created_at INTEGER NOT NULL,
+    UNIQUE(user_id, trigger)
+);
+CREATE INDEX IF NOT EXISTS ix_snippets_user ON snippets(user_id);
+
 -- Personal dictionary: per-user "never flag/change this" terms (intentional
 -- spellings, names, jargon). Injected into the engine as PROTECTED TERMS.
 CREATE TABLE IF NOT EXISTS personal_dictionary (
@@ -511,6 +523,67 @@ class Store:
         ).fetchall()
         return [dict(r) for r in rows]
 
+    def restore_document_version(self, user_id: int, document_id: int,
+                                 version_id: int) -> Optional[dict]:
+        """Make a past version the current content (recorded as a new version)."""
+        if not self._owns_document(user_id, document_id):
+            return None
+        row = self._conn.execute(
+            "SELECT content FROM document_versions WHERE id = ? AND document_id = ?",
+            (version_id, document_id),
+        ).fetchone()
+        if row is None:
+            return None
+        return self.add_document_version(user_id, document_id, row["content"])
+
+    def prune_document_versions(self, document_id: int, keep: int) -> int:
+        """Keep only the newest ``keep`` versions; return how many were deleted."""
+        ids = [r["id"] for r in self._conn.execute(
+            "SELECT id FROM document_versions WHERE document_id = ? ORDER BY id DESC",
+            (document_id,)).fetchall()]
+        stale = ids[keep:]
+        if not stale:
+            return 0
+        with self._lock:
+            self._conn.executemany(
+                "DELETE FROM document_versions WHERE id = ?", [(i,) for i in stale])
+            self._conn.commit()
+        return len(stale)
+
+    # --- snippets (per-user trigger -> body) ---------------------------------
+
+    def upsert_snippet(self, user_id: int, trigger: str, body: str) -> dict:
+        trigger, body = trigger.strip(), body
+        with self._lock:
+            self._conn.execute(
+                "INSERT INTO snippets(user_id, trigger, body, created_at) VALUES (?,?,?,?) "
+                "ON CONFLICT(user_id, trigger) DO UPDATE SET body = excluded.body",
+                (user_id, trigger, body, int(time.time())))
+            self._conn.commit()
+        row = self._conn.execute(
+            "SELECT trigger, body, created_at FROM snippets WHERE user_id = ? AND trigger = ?",
+            (user_id, trigger)).fetchone()
+        return dict(row)
+
+    def list_snippets(self, user_id: int) -> list[dict]:
+        rows = self._conn.execute(
+            "SELECT trigger, body, created_at FROM snippets WHERE user_id = ? ORDER BY trigger",
+            (user_id,)).fetchall()
+        return [dict(r) for r in rows]
+
+    def remove_snippet(self, user_id: int, trigger: str) -> bool:
+        trigger = trigger.strip()
+        exists = self._conn.execute(
+            "SELECT 1 FROM snippets WHERE user_id = ? AND trigger = ?",
+            (user_id, trigger)).fetchone()
+        if not exists:
+            return False
+        with self._lock:
+            self._conn.execute(
+                "DELETE FROM snippets WHERE user_id = ? AND trigger = ?", (user_id, trigger))
+            self._conn.commit()
+        return True
+
     # --- preferences ---------------------------------------------------------
 
     def get_preferences(self, user_id: int) -> dict:
@@ -534,6 +607,17 @@ class Store:
             )
             self._conn.commit()
         return data
+
+    def weekly_email_recipients(self) -> list[dict]:
+        """Users who explicitly opted into the weekly recap (preferences flag)."""
+        rows = self._conn.execute(
+            "SELECT u.id, u.email FROM users u JOIN preferences p ON p.user_id = u.id"
+        ).fetchall()
+        out = []
+        for r in rows:
+            if self.get_preferences(r["id"]).get("weekly_email"):
+                out.append({"id": r["id"], "email": r["email"]})
+        return out
 
     # --- sessions ------------------------------------------------------------
 

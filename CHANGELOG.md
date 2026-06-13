@@ -3,6 +3,19 @@
 ## Unreleased — Trust Layer
 
 ### Added
+- **Platform strays** (Gap-4 depth, PR-6): **snippets** (`snippets` table +
+  `GET/POST/DELETE /v1/snippets` with trigger validation; CLI `write-better
+  snippets add|list|rm` over a local file — expansion is client-side, the engine
+  never sees snippet state); **goals** (`GET/PUT /v1/goals` — pick issue
+  categories, get a per-1k-words progress trend from analytics; progress framing
+  only, no streaks); **weekly email** (opt-in only via `weekly_email` preference,
+  composed from existing analytics insights, HMAC-signed one-click unsubscribe,
+  sent through the `mailer` interface; `GET /v1/cron/weekly-email` guarded by
+  `WB_CRON_SECRET`; unsubscribed users are never composed for); and **document-
+  version restore + per-tier retention cap** (`POST /v1/documents/{id}/versions/
+  {vid}/restore`; oldest pruned beyond `plans.version_cap`). Analytics event
+  `weekly_email_sent`. Engine-only deploys never mount these, so the bare API is
+  unaffected.
 - **Long-form manuscript context + `continuity`** (Gap-4 depth, PR-4): rewriting
   requests accept a typed `context` — a string or `{text, role}` with role
   `preceding_manuscript | outline | style_reference` — injected as a role-specific

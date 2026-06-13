@@ -91,6 +91,14 @@ PLANS: tuple[Plan, ...] = (
 
 PLANS_BY_NAME = {p.name.lower(): p for p in PLANS}
 
+# Per-tier saved document-version retention (a storage limit, not a metered cost).
+VERSION_CAPS = {"free": 5, "starter": 20, "pro": 50, "business": 200}
+
+
+def version_cap(plan_name: str) -> int:
+    """How many document versions a plan retains (oldest pruned beyond this)."""
+    return VERSION_CAPS.get((plan_name or "").lower(), VERSION_CAPS["free"])
+
 
 # ---- Cost-to-serve components -------------------------------------------------
 
