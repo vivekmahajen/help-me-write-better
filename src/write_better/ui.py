@@ -70,6 +70,9 @@ PAGE = """<!doctype html>
   details.adv { margin-top:12px; border-top:1px solid var(--line); padding-top:6px; }
   details.adv summary { cursor:pointer; color:var(--muted); font-size:12px;
           text-transform:uppercase; letter-spacing:.04em; }
+  .gallery { margin-top:10px; padding:12px; border:1px solid var(--line);
+          border-radius:10px; background:#0c0f1c; }
+  #tplfields input, #tplfields textarea { margin-bottom:6px; }
 </style>
 </head>
 <body>
@@ -92,6 +95,17 @@ PAGE = """<!doctype html>
       <button id="mic" class="mini" type="button" title="Dictate with your voice">🎤 Dictate</button>
       <button id="scan" class="mini" type="button"
         title="Find emails, numbers, and keys — runs locally, no model">Scan for sensitive info</button>
+      <button id="templates" class="mini" type="button"
+        title="Browse and run the template library (sign-in required)">Templates</button>
+    </div>
+
+    <div id="gallery" class="gallery" hidden>
+      <label for="tpl">Template</label>
+      <select id="tpl"></select>
+      <div id="tplfields"></div>
+      <div class="actions">
+        <button id="tplrun" type="button">Generate</button>
+      </div>
     </div>
 
     <label>Services</label>
@@ -365,6 +379,83 @@ $('logout').addEventListener('click', async () => {
   try { await fetch('/auth/logout', { method: 'POST' }); } catch (e) {}
   location.href = '/auth/login';
 });
+
+// --- Template gallery: list + run via the session-authed /account path ---
+// (signed-in users only; falls back gracefully on the keyless engine-only deploy).
+let TEMPLATES = [];
+function currentTpl() { return TEMPLATES[+$('tpl').value] || null; }
+function escAttr(s) { return String(s || '').replace(/"/g, '&quot;').replace(/</g, '&lt;'); }
+
+function renderTplFields() {
+  const t = currentTpl();
+  if (!t) { $('tplfields').innerHTML = ''; return; }
+  $('tplfields').innerHTML = (t.fields || []).map((f) => {
+    const id = 'tf_' + f.key;
+    const label = escAttr(f.label || f.key) + (f.required ? ' *' : '');
+    const val = escAttr(f.default || '');
+    const input = (f.type === 'textarea')
+      ? `<textarea id="${id}" placeholder="${escAttr(f.label || f.key)}">${val}</textarea>`
+      : `<input id="${id}" type="text" placeholder="${escAttr(f.label || f.key)}" value="${val}">`;
+    return `<label for="${id}">${label}</label>${input}`;
+  }).join('');
+}
+
+async function loadTemplates() {
+  try {
+    const res = await fetch('/account/templates', { headers: { Accept: 'application/json' } });
+    if (!res.ok) {
+      $('meta').innerHTML = '<span class="err">Templates need an account — sign in first.</span>';
+      return false;
+    }
+    TEMPLATES = (await res.json()).templates || [];
+    $('tpl').innerHTML = TEMPLATES.map((t, i) =>
+      `<option value="${i}">${escAttr(t.category)} — ${escAttr(t.name)}</option>`).join('');
+    renderTplFields();
+    return true;
+  } catch (e) {
+    $('meta').innerHTML = '<span class="err">Templates aren\\'t available on this deployment.</span>';
+    return false;
+  }
+}
+
+async function runTemplate() {
+  const t = currentTpl();
+  if (!t) return;
+  const fields = {};
+  (t.fields || []).forEach((f) => { fields[f.key] = ($('tf_' + f.key) || {}).value || ''; });
+  $('tplrun').disabled = true; $('meta').textContent = 'Generating…';
+  $('out').textContent = ''; $('copy').hidden = true;
+  try {
+    const res = await fetch('/account/templates/run', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ template: t.id, fields }),
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      let msg = data.error || ('HTTP ' + res.status);
+      if (data.code === 'missing_fields') msg = 'Fill the required fields: ' + (data.missing || []).join(', ');
+      $('meta').innerHTML = '<span class="err">' + msg + '</span>';
+    } else {
+      $('out').textContent = data.text;
+      $('meta').textContent = data.model + ' · template: ' + data.template;
+      $('copy').hidden = false;
+    }
+  } catch (e) {
+    $('meta').innerHTML = '<span class="err">Request failed: ' + e + '</span>';
+  } finally {
+    $('tplrun').disabled = false;
+  }
+}
+
+$('templates').addEventListener('click', async () => {
+  if ($('gallery').hidden) {
+    if (await loadTemplates()) $('gallery').hidden = false;
+  } else {
+    $('gallery').hidden = true;
+  }
+});
+$('tpl').addEventListener('change', renderTplFields);
+$('tplrun').addEventListener('click', runTemplate);
 
 setupMic();
 init();

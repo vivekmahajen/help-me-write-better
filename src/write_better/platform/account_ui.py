@@ -18,7 +18,10 @@ programmatic path; this surface is the human one over the very same data.
 from __future__ import annotations
 
 import json
+from urllib.parse import parse_qs
 
+from ..engine import Request, has_api_key, improve as engine_improve
+from ..templating import MissingFields, get_template, list_templates, validate_and_render
 from ..voice import build_profile
 from .webauth import current_user
 
@@ -56,7 +59,7 @@ def _read_json(environ):
     return (data, None) if isinstance(data, dict) else (None, "body must be an object")
 
 
-def make_account(store):
+def make_account(store, engine=engine_improve):
     """A WSGI app mounted at ``/account`` (see ``platform/wsgi.py``)."""
 
     def app(environ, start_response):
@@ -77,6 +80,41 @@ def make_account(store):
             return _json(start_response, "401 Unauthorized",
                          {"error": "not signed in", "code": "unauthorized"})
         uid = user["id"]
+
+        # Template gallery (session-authed): list the library + run one through
+        # the engine, so signed-in users can test templates in the browser with
+        # no API key. Injectable engine for offline tests.
+        if rest == ["templates"] and method == "GET":
+            category = (parse_qs(environ.get("QUERY_STRING", "")).get("category") or [None])[0]
+            return _json(start_response, "200 OK", {"templates": list_templates(category)})
+
+        if rest == ["templates", "run"] and method == "POST":
+            data, err = _read_json(environ)
+            if err:
+                return _json(start_response, "400 Bad Request", {"error": err})
+            tpl = get_template(data.get("template") or "")
+            if tpl is None:
+                return _json(start_response, "422 Unprocessable Entity", {
+                    "error": f"unknown template {data.get('template')!r}",
+                    "code": "unknown_template"})
+            try:
+                text = validate_and_render(tpl, data.get("fields") or {})
+            except MissingFields as exc:
+                return _json(start_response, "422 Unprocessable Entity", {
+                    "error": str(exc), "code": "missing_fields",
+                    "missing": exc.missing, "fields": list(tpl.fields)})
+            if not has_api_key():
+                return _json(start_response, "503 Service Unavailable",
+                             {"error": "the engine is not configured on this server"})
+            try:
+                result = engine(Request(
+                    text=text, services=[tpl.defaults.get("service", "write")],
+                    output_format=tpl.defaults.get("format", "markdown")))
+            except Exception as exc:  # surface engine errors cleanly
+                return _json(start_response, "502 Bad Gateway",
+                             {"error": f"generation failed: {exc}"})
+            return _json(start_response, "200 OK",
+                         {"text": result.text, "model": result.model, "template": tpl.id})
 
         if rest == ["dictionary"]:
             if method == "GET":
