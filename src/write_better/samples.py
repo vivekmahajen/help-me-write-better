@@ -200,4 +200,25 @@ SAMPLES: dict[str, str] = {
         "anyway so like thursday afternoon would be way better i think and also can you uh "
         "bring the the budget numbers the q3 ones"
     ),
+    "merge": (
+        "=== SOURCE 1 ===\n"
+        "Team synced on the launch. We agreed to ship the beta on March 10 and cap it "
+        "at 50 users. Marketing drafts the announcement.\n\n"
+        "=== SOURCE 2 ===\n"
+        "Launch notes: beta goes out mid-March to a small group (~50 people). Hold the "
+        "press release until general availability, not the beta."
+    ),
+    "wordfinder": (
+        "What's the word for the bittersweet awareness that something good is happening "
+        "even as you realize it's already slipping into the past?"
+    ),
+    "argument-check": (
+        "We must ban all cars from downtown immediately. Traffic is terrible, and everyone "
+        "knows cars cause pollution. The cities that did this are thriving. If we don't act "
+        "now, downtown will die. Clearly, there is no reason to wait."
+    ),
+    "localize-tone": (
+        "Hey — your invoice is three weeks late. I need it paid by Friday or we stop work. "
+        "Let me know."
+    ),
 }

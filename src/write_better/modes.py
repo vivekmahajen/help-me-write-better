@@ -317,6 +317,51 @@ _EXTENDED_MODES: tuple[Mode, ...] = (
              "issues so the writer learns the pattern, not just the fix. Encouraging, concise, never "
              "condescending. This is a teaching pass, not just an editing pass."
          )),
+    Mode("merge", "Merge multiple drafts into one document with a decision log.",
+         "premium", aliases=("combine", "consolidate"),
+         instruction=(
+             "The TEXT contains multiple drafts separated by '=== SOURCE N ===' markers "
+             "(if there are no markers, treat the whole text as a single source). Merge them "
+             "into ONE coherent, non-repetitive document that keeps the best of each and flows "
+             "naturally. Then add a '--- DECISIONS ---' section listing, per choice: what you "
+             "KEPT (and from which source #), what you DROPPED (and why - redundant/weaker), and "
+             "what you MERGED. Where two sources state CONFLICTING facts, do NOT silently pick "
+             "one - flag it as [CONFLICT: source 1 says X; source 2 says Y - verify] and keep both "
+             "until resolved. Do not invent new content. Match the dominant tone of the sources."
+         )),
+    Mode("wordfinder", "Reverse dictionary + in-context synonyms with register notes.",
+         "routine", aliases=("reverse-dictionary", "find-word", "synonyms"),
+         instruction=(
+             "Find the word(s) the user is reaching for. The TEXT is either (a) a DESCRIPTION of a "
+             "meaning ('the word for fear of being replaced by machines') or (b) a sentence with a "
+             "target word marked in [[double brackets]] wanting a better in-context fit. Return a "
+             "ranked list of 5-8 candidates; for each give the word, a one-line definition or "
+             "nuance, a register tag (formal / neutral / casual), and a short usage example. For "
+             "the in-context case, only suggest words that fit the sentence's meaning and tone - "
+             "not random synonyms. If the description is ambiguous, give the best matches per "
+             "interpretation. Analysis only; do not rewrite the text."
+         )),
+    Mode("argument-check", "Map an argument's thesis, claim support, and gaps.",
+         "premium", aliases=("argument", "logic-check", "reasoning"),
+         instruction=(
+             "Analyze the argument in the TEXT (do NOT rewrite it). Output: (1) THESIS - the "
+             "central claim in one sentence (or note if none is clear). (2) CLAIM MAP - each "
+             "supporting claim with a rating: [supported] (quote the supporting span), [weakly "
+             "supported], or [unsupported] (note the missing support). (3) GAPS - unaddressed "
+             "counterarguments or objections a critical reader would raise. (4) VERDICT - one line "
+             "on how well the argument holds together. End with: 'This is a structural read of the "
+             "reasoning, not a fact-check - pair with fact-flag to verify the claims themselves.'"
+         )),
+    Mode("localize-tone", "Shift writing into a target cultural communication register.",
+         "standard", aliases=("localize", "register-shift"),
+         instruction=(
+             "Rewrite the TEXT into the communication register named by CULTURE (a register/style "
+             "shift only - NOT translation and NOT cultural consultation; the output stays in "
+             "English). Adjust directness, formality, politeness softeners, and sentence rhythm to "
+             "fit that register while preserving the meaning, facts, and intent EXACTLY. Do not add "
+             "or remove substance. If no CULTURE is given, say so and make no change. Return only "
+             "the rewritten text."
+         )),
     Mode("score", "One-screen report card with sub-scores and top fixes.",
          "standard", aliases=("report-card", "grade"),
          instruction=(

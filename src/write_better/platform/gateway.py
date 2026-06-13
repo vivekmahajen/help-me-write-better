@@ -23,7 +23,9 @@ from urllib.parse import parse_qs
 
 from ..citation import cite_batch, default_http
 from ..engine import Request, improve as engine_improve
+from ..prompt import fold_sources
 from ..voice import build_profile as build_voice_profile, render_voice_profile
+from .. import localize
 from ..modes import resolve_services
 from ..prompt import VALID_FORMATS
 from ..realtime import check_text, style_fingerprint
@@ -582,7 +584,12 @@ def _improve(store, engine, user, environ, start_response):
                 "format": data.get("format") or tpl.defaults.get("format", "markdown")}
         n_variants = max(1, min(int(data.get("variants") or tpl.variants or 1), MAX_VARIANTS))
 
-    text = (data.get("text") or "").strip()
+    # `merge` accepts a `texts` array; fold it into one delimited TEXT.
+    texts = data.get("texts")
+    if isinstance(texts, list) and any(str(t).strip() for t in texts):
+        text = fold_sources(texts)
+    else:
+        text = (data.get("text") or "").strip()
     if not text:
         return _json(start_response, "400 Bad Request", {"error": "'text' is required"})
 
@@ -596,6 +603,16 @@ def _improve(store, engine, user, environ, start_response):
         modes = resolve_services(data.get("services") or "clarify")
     except ValueError as exc:
         return _json(start_response, "400 Bad Request", {"error": str(exc)})
+
+    # `localize-tone` requires a supported `culture`; unknown -> 422 with the list.
+    free_form = data.get("request")
+    if any(m.name == "localize-tone" for m in modes):
+        culture = data.get("culture")
+        if not localize.is_supported(culture):
+            return _json(start_response, "422 Unprocessable Entity",
+                         {"error": f"unknown culture {culture!r}",
+                          "code": "unknown_culture", "supported": localize.ids()})
+        free_form = localize.augment(free_form, culture)
 
     # Enforce the plan cap BEFORE spending on the engine. For variants, clamp to
     # what the plan allows (premium services consume one generation each).
@@ -637,7 +654,7 @@ def _improve(store, engine, user, environ, start_response):
         length=data.get("length"),
         reading_level=data.get("reading_level"),
         language=data.get("language"),
-        free_form=data.get("request"),
+        free_form=free_form,
         model=data.get("model"),
         effort=data.get("effort", "high"),
         style_guide=style_guide or None,

@@ -9,4 +9,4 @@ def test_every_service_has_a_nonempty_sample():
 
 
 def test_samples_count_matches_services():
-    assert len(SAMPLES) == len(MODES) == 40
+    assert len(SAMPLES) == len(MODES) == 44

@@ -48,6 +48,13 @@ def _target_block(
     return "; ".join(parts) if parts else "(unspecified — keep the author's defaults)"
 
 
+def fold_sources(texts) -> str:
+    """Fold multiple drafts into one delimited TEXT for the ``merge`` service.
+    Blank entries are dropped and the rest renumbered contiguously."""
+    cleaned = [str(t).strip() for t in texts if str(t).strip()]
+    return "\n\n".join(f"=== SOURCE {i} ===\n{s}" for i, s in enumerate(cleaned, 1))
+
+
 def build_user_message(
     *,
     text: str,
