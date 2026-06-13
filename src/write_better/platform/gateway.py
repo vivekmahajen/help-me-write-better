@@ -27,6 +27,9 @@ from ..engine import Request, improve as engine_improve
 from ..prompt import fold_sources
 from ..voice import build_profile as build_voice_profile, render_voice_profile
 from .. import localize
+from .. import plans
+from . import goals as goals_mod
+from . import weekly
 from ..modes import resolve_services
 from ..prompt import VALID_FORMATS
 from ..realtime import check_text, style_fingerprint
@@ -103,13 +106,17 @@ def _read_json(environ) -> tuple[dict | None, str | None]:
 
 
 def make_gateway(store: Store, engine=engine_improve, vendor="env",
-                 citation_http=default_http):
+                 citation_http=default_http, mailer=None, base_url=""):
     """Build the gateway WSGI app over ``store``.
 
-    ``engine``, ``vendor`` (plagiarism/AI scan provider), and ``citation_http``
-    (HTTP fetch for citation resolvers) are injectable for tests; ``vendor="env"``
-    resolves it from ``ORIGINALITY_API_KEY`` (None if unset).
+    ``engine``, ``vendor`` (plagiarism/AI scan provider), ``citation_http``
+    (HTTP fetch for citation resolvers), and ``mailer`` (weekly-email transport)
+    are injectable for tests; ``vendor="env"`` resolves it from
+    ``ORIGINALITY_API_KEY`` (None if unset).
     """
+    if mailer is None:
+        from .mailer import ConsoleMailer
+        mailer = ConsoleMailer()
     if vendor == "env":
         vendor = vendor_from_env()
 
@@ -141,6 +148,9 @@ def make_gateway(store: Store, engine=engine_improve, vendor="env",
                     "GET|POST /v1/documents": "list / create saved documents",
                     "GET|PATCH|DELETE /v1/documents/{id}": "fetch / rename / delete a document",
                     "GET|POST /v1/documents/{id}/versions": "list / add a version",
+                    "POST /v1/documents/{id}/versions/{vid}/restore": "restore a past version",
+                    "GET|POST|DELETE /v1/snippets": "manage text snippets (client-side expansion)",
+                    "GET|PUT /v1/goals": "writing goals + progress trend",
                     "POST /v1/improve": "run the engine (metered, capped)",
                     "POST /v1/check": "real-time inline check (local, uncapped)",
                     "POST /v1/fingerprint": "prose style fingerprint (local, uncapped)",
@@ -159,6 +169,13 @@ def make_gateway(store: Store, engine=engine_improve, vendor="env",
             return _json(start_response, "200 OK", openapi_spec())
         if path == "/v1/docs" and method == "GET":
             return _html(start_response, "200 OK", DOCS_PAGE)
+
+        # Public: weekly-email cron (shared secret) + one-click unsubscribe (signed
+        # token). No login — the unsubscribe link is clicked from an email.
+        if path == "/v1/cron/weekly-email" and method in ("GET", "POST"):
+            return _cron_weekly_email(store, mailer, base_url, environ, start_response)
+        if path == "/v1/unsubscribe" and method == "GET":
+            return _unsubscribe(store, environ, start_response)
 
         # Everything else requires authentication.
         user = accounts.authenticate_key(store, _bearer(environ))
@@ -185,6 +202,12 @@ def make_gateway(store: Store, engine=engine_improve, vendor="env",
 
         if rest == ["preferences"]:
             return _preferences(store, user, method, environ, start_response)
+
+        if rest == ["snippets"]:
+            return _snippets(store, user, method, environ, start_response)
+
+        if rest == ["goals"]:
+            return _goals(store, user, method, environ, start_response)
 
         if rest == ["dictionary"]:
             return _dictionary(store, user, method, environ, start_response)
@@ -437,6 +460,100 @@ def _preferences(store, user, method, environ, start_response):
     return _json(start_response, "405 Method Not Allowed", {"error": "use GET or PUT"})
 
 
+def _valid_trigger(trigger: str):
+    if not trigger:
+        return False, "'trigger' is required"
+    if len(trigger) > 32:
+        return False, "trigger must be 32 characters or fewer"
+    if any(c.isspace() for c in trigger):
+        return False, "trigger must not contain whitespace"
+    return True, ""
+
+
+def _snippets(store, user, method, environ, start_response):
+    """Per-user text snippets. Expansion is client-side; the engine never sees these."""
+    uid = user["id"]
+    if method == "GET":
+        return _json(start_response, "200 OK", {"snippets": store.list_snippets(uid)})
+    data, err = _read_json(environ)
+    if err:
+        return _json(start_response, "400 Bad Request", {"error": err})
+    trigger = (data.get("trigger") or "").strip()
+    if method == "POST":
+        ok, msg = _valid_trigger(trigger)
+        if not ok:
+            return _json(start_response, "400 Bad Request", {"error": msg})
+        body = data.get("body")
+        if not isinstance(body, str) or not body:
+            return _json(start_response, "400 Bad Request", {"error": "'body' is required"})
+        snip = store.upsert_snippet(uid, trigger, body)
+        return _json(start_response, "201 Created",
+                     {"snippet": snip, "snippets": store.list_snippets(uid)})
+    if method == "DELETE":
+        if not store.remove_snippet(uid, trigger):
+            return _json(start_response, "404 Not Found",
+                         {"error": f"no snippet {trigger!r}"})
+        return _json(start_response, "200 OK", {"snippets": store.list_snippets(uid)})
+    return _json(start_response, "405 Method Not Allowed",
+                 {"error": "use GET, POST, or DELETE"})
+
+
+def _goals(store, user, method, environ, start_response):
+    """Personal writing goals + progress trend (progress framing only, no streaks)."""
+    uid = user["id"]
+    prefs = store.get_preferences(uid)
+    if method == "GET":
+        selected = goals_mod.normalize(prefs.get("goals"))
+        return _json(start_response, "200 OK", {
+            "goals": selected,
+            "categories": list(goals_mod.GOAL_CATEGORIES),
+            "trend": goals_mod.trend(store, uid, selected)})
+    if method in ("PUT", "POST"):
+        data, err = _read_json(environ)
+        if err:
+            return _json(start_response, "400 Bad Request", {"error": err})
+        selected = goals_mod.normalize(data.get("goals"))
+        prefs["goals"] = selected
+        store.set_preferences(uid, prefs)
+        return _json(start_response, "200 OK",
+                     {"goals": selected, "trend": goals_mod.trend(store, uid, selected)})
+    return _json(start_response, "405 Method Not Allowed", {"error": "use GET or PUT"})
+
+
+def _cron_weekly_email(store, mailer, base_url, environ, start_response):
+    """Send the weekly recap to opted-in users. Guarded by a shared secret; only
+    composes for explicit opt-ins (unsubscribed users are never built)."""
+    secret = os.environ.get("WB_CRON_SECRET")
+    given = (parse_qs(environ.get("QUERY_STRING", "")).get("secret") or [None])[0]
+    given = given or environ.get("HTTP_X_CRON_SECRET")
+    if not secret or given != secret:
+        return _json(start_response, "403 Forbidden",
+                     {"error": "missing or invalid cron secret"})
+    sent = 0
+    for u in store.weekly_email_recipients():
+        insights = analytics.weekly_insights(store, u["id"])
+        mailer.send(weekly.compose(u, insights, base_url))
+        store.insert_usage(u["id"], "weekly_email_sent", "none", premium=False,
+                           input_tokens=0, output_tokens=0)
+        sent += 1
+    return _json(start_response, "200 OK", {"sent": sent})
+
+
+def _unsubscribe(store, environ, start_response):
+    qs = parse_qs(environ.get("QUERY_STRING", ""))
+    uid = (qs.get("u") or [None])[0]
+    token = (qs.get("token") or [None])[0]
+    if not weekly.verify_unsubscribe(uid, token):
+        return _json(start_response, "400 Bad Request",
+                     {"error": "invalid or expired unsubscribe link"})
+    prefs = store.get_preferences(int(uid))
+    prefs["weekly_email"] = False
+    store.set_preferences(int(uid), prefs)
+    return _html(start_response, "200 OK",
+                 "<!doctype html><meta charset=utf-8><p>You're unsubscribed from the "
+                 "weekly writing recap. You can re-enable it anytime in settings.</p>")
+
+
 def _dictionary(store, user, method, environ, start_response):
     """Personal dictionary CRUD. These terms are injected into every improve call
     as PROTECTED TERMS the engine must never flag or change."""
@@ -535,8 +652,24 @@ def _documents(store, user, rest, method, environ, start_response):
             doc = store.add_document_version(uid, doc_id, content)
             if doc is None:
                 return _json(start_response, "404 Not Found", {"error": "no such document"})
+            store.prune_document_versions(doc_id, plans.version_cap(user.get("plan")))
             return _json(start_response, "201 Created", {"document": doc})
         return _json(start_response, "405 Method Not Allowed", {"error": "use GET or POST"})
+
+    # /v1/documents/{id}/versions/{vid}/restore -> make a past version current
+    if len(rest) == 5 and rest[2] == "versions" and rest[4] == "restore":
+        if method != "POST":
+            return _json(start_response, "405 Method Not Allowed", {"error": "use POST"})
+        try:
+            version_id = int(rest[3])
+        except ValueError:
+            return _json(start_response, "404 Not Found", {"error": "invalid version id"})
+        doc = store.restore_document_version(uid, doc_id, version_id)
+        if doc is None:
+            return _json(start_response, "404 Not Found",
+                         {"error": "no such document or version"})
+        store.prune_document_versions(doc_id, plans.version_cap(user.get("plan")))
+        return _json(start_response, "201 Created", {"document": doc})
 
     # /v1/documents/{id} -> get / rename / delete
     if rest[2:] == []:

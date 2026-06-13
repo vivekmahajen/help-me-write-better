@@ -29,7 +29,7 @@ _BASE_URL = os.environ.get("WB_BASE_URL", "http://localhost")
 # POSTGRES_URL be picked up) to a postgres:// URL. Falls back to local SQLite.
 _DB = resolve_db_url()
 _store = Store(_DB)
-_gateway = make_gateway(_store)
+_gateway = make_gateway(_store, mailer=mailer_from_env(), base_url=_BASE_URL)
 _webauth = make_webauth(_store, oauth_providers=providers_from_env(),
                         base_url=_BASE_URL, mailer=mailer_from_env())
 

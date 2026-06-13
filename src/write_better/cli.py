@@ -100,8 +100,63 @@ def _read_text(infile: str | None) -> str:
     return sys.stdin.read()
 
 
+def _snippets_path():
+    import os
+    import pathlib
+    return pathlib.Path(os.environ.get("WB_SNIPPETS_PATH")
+                        or os.path.expanduser("~/.write-better/snippets.json"))
+
+
+def _snippets_cli(args: list[str]) -> int:
+    """Client-side snippet store (a local JSON file). The engine never sees these."""
+    import json
+    path = _snippets_path()
+    try:
+        snips = json.loads(path.read_text(encoding="utf-8"))
+    except (FileNotFoundError, ValueError):
+        snips = {}
+
+    def save():
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(json.dumps(snips, indent=2), encoding="utf-8")
+
+    cmd = args[0] if args else "list"
+    if cmd == "list":
+        if not snips:
+            print("no snippets yet — add one with: write-better snippets add <trigger> <body>")
+        for trig in sorted(snips):
+            print(f"{trig}\t{snips[trig]}")
+        return 0
+    if cmd == "add":
+        if len(args) < 3:
+            print("usage: write-better snippets add <trigger> <body...>", file=sys.stderr)
+            return 2
+        trigger = args[1]
+        if len(trigger) > 32 or any(c.isspace() for c in trigger):
+            print("trigger must be <=32 chars with no whitespace", file=sys.stderr)
+            return 2
+        snips[trigger] = " ".join(args[2:])
+        save()
+        print(f"added {trigger}")
+        return 0
+    if cmd == "rm":
+        if len(args) < 2 or args[1] not in snips:
+            print(f"no snippet {args[1] if len(args) > 1 else ''!r}", file=sys.stderr)
+            return 1
+        del snips[args[1]]
+        save()
+        print(f"removed {args[1]}")
+        return 0
+    print(f"unknown snippets command {cmd!r} (use add | list | rm)", file=sys.stderr)
+    return 2
+
+
 def main(argv: list[str] | None = None) -> int:
-    args = _build_parser().parse_args(argv)
+    raw = list(sys.argv[1:] if argv is None else argv)
+    if raw and raw[0] == "snippets":
+        return _snippets_cli(raw[1:])
+
+    args = _build_parser().parse_args(raw)
 
     if args.list:
         _print_services()
