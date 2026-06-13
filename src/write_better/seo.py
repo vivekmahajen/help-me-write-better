@@ -56,6 +56,14 @@ def _structured_data(base: str) -> str:
     return json.dumps(data, separators=(",", ":"))
 
 
+def _verification(env=None) -> str:
+    """Google Search Console ownership meta tag, when WB_GOOGLE_VERIFICATION is set.
+    Lets you verify the site to request a Safe Browsing review (no DNS needed)."""
+    env = os.environ if env is None else env
+    code = (env.get("WB_GOOGLE_VERIFICATION") or "").strip()
+    return f'\n<meta name="google-site-verification" content="{_esc(code)}">' if code else ""
+
+
 def head(base: str | None = None) -> str:
     """The full SEO ``<head>`` block for the landing page (title → JSON-LD)."""
     base = base_url() if base is None else base
@@ -63,7 +71,7 @@ def head(base: str | None = None) -> str:
     og_image = _abs(base, "/og.svg") or "/og.svg"
     t, d = _esc(TITLE), _esc(DESCRIPTION)
     return f"""<title>{t}</title>
-<meta name="description" content="{d}">
+<meta name="description" content="{d}">{_verification()}
 <link rel="canonical" href="{canonical}">
 <meta name="robots" content="index,follow">
 <meta property="og:type" content="website">
