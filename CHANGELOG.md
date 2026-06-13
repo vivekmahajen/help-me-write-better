@@ -3,6 +3,14 @@
 ## Unreleased — Trust Layer
 
 ### Added
+- **Citations: 3 → 5 styles, type-aware, + BibTeX** (Gap-4 depth, PR-3): a pure-
+  Python CSL-subset renderer over the existing CSL-JSON pipeline — APA, MLA,
+  Chicago, Harvard, IEEE, each correct across four item types (article, book,
+  chapter, webpage), golden-tested byte-for-byte (5×4). Adds `to_bibtex` export,
+  IEEE numbered in-text (`[1]`, `[2]` by position), and **explicit** unbundled-
+  style degradation (falls back to APA *with a warning* — never silent). See
+  `docs/decisions/ADR-002-csl.md` for why we render in pure Python rather than
+  adopt citeproc-py (lxml weight + vendoring). The `cite` contract is unchanged.
 - **Marketing templates → 26** (Gap-4 depth, PR-2): added `cold-email-followup`,
   `case-study`, `press-release`, `google-rsa`, `facebook-ad`, `x-thread`,
   `youtube-metadata`, `launch-announcement`, `webinar-invite`,
