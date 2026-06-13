@@ -1,0 +1,22 @@
+id: dispute-charge
+name: Dispute a charge
+category: everyday
+description: A firm, documented letter disputing a billing error or unauthorized charge.
+fields:
+  - { key: charge, label: "The charge (amount, date, merchant)", type: textarea, required: true }
+  - { key: reason, label: "Why it's wrong", type: textarea, required: true }
+  - { key: account, label: "Account / order / reference #", type: text, required: false }
+  - { key: resolution, label: "What you want (refund, reversal, …)", type: text, required: true }
+  - { key: tone, label: "Tone", type: text, required: false, default: "firm, factual, and civil" }
+defaults: { service: write, format: plain }
+variants: 1
+prompt: |
+  Write a letter disputing this charge: {charge}.
+  Why it is incorrect: {reason}.
+  {{#account}}Account / reference: {account}.{{/account}}
+  Requested resolution: {resolution}.
+  Tone: {tone}. State the facts and the specific charge clearly, identify the
+  error, request the resolution with a reasonable timeframe, and note you will
+  escalate (chargeback / regulator) if it isn't resolved — without threats or
+  insults. Do NOT invent dates, amounts, names, or policy citations not provided —
+  use [bracketed placeholders]. Keep a clear paper-trail tone.

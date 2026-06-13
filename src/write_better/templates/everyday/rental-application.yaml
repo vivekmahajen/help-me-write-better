@@ -1,0 +1,21 @@
+id: rental-application
+name: Rental application note
+category: everyday
+description: A cover note to a landlord that makes you a standout, trustworthy tenant.
+fields:
+  - { key: property, label: "The property / address", type: text, required: true }
+  - { key: about, label: "About you (job, income, household)", type: textarea, required: true }
+  - { key: why, label: "Why you want this place (optional)", type: textarea, required: false }
+  - { key: extras, label: "Reassurances (references, pets, move-in date)", type: textarea, required: false }
+  - { key: tone, label: "Tone", type: text, required: false, default: "friendly and reliable" }
+defaults: { service: write, format: plain, length: short }
+variants: 1
+prompt: |
+  Write a short cover note to a landlord applying to rent {property}.
+  About the applicant: {about}.
+  {{#why}}Why they want this place: {why}.{{/why}}
+  {{#extras}}Reassurances to include: {extras}.{{/extras}}
+  Tone: {tone}. Come across as stable, considerate, and easy to work with;
+  highlight reliability (steady income, good references, care for the home)
+  without oversharing. Do NOT invent income figures, references, employers, or
+  dates not provided — use [bracketed placeholders]. Keep it concise.

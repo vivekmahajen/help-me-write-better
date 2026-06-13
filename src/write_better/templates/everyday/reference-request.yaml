@@ -1,0 +1,21 @@
+id: reference-request
+name: Reference request
+category: everyday
+description: Politely ask someone to be a reference or write you a recommendation.
+fields:
+  - { key: person, label: "Who you're asking (name / relationship)", type: text, required: true }
+  - { key: purpose, label: "What it's for (job, school, etc.)", type: text, required: true }
+  - { key: why_them, label: "Why you're asking them specifically", type: textarea, required: false }
+  - { key: deadline, label: "Deadline (optional)", type: text, required: false }
+  - { key: tone, label: "Tone", type: text, required: false, default: "warm and respectful" }
+defaults: { service: write, format: plain, length: short }
+variants: 1
+prompt: |
+  Write a short message asking {person} to serve as a reference or write a
+  recommendation for {purpose}.
+  {{#why_them}}Why this person specifically: {why_them}.{{/why_them}}
+  {{#deadline}}Mention the deadline: {deadline}.{{/deadline}}
+  Tone: {tone}. Make it genuinely easy to decline, offer to share a resume and a
+  reminder of your work together, and thank them for considering. Do NOT invent
+  shared history, dates, or accomplishments not provided — use [bracketed
+  placeholders]. Keep it brief and sincere.

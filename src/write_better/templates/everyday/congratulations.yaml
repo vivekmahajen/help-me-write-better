@@ -1,0 +1,17 @@
+id: congratulations
+name: Congratulations note
+category: everyday
+description: A genuine congratulations message for a milestone or win.
+fields:
+  - { key: recipient, label: "Who you're congratulating", type: text, required: false }
+  - { key: occasion, label: "What for (new job, baby, promotion, …)", type: text, required: true }
+  - { key: detail, label: "A personal detail to mention (optional)", type: textarea, required: false }
+  - { key: tone, label: "Tone", type: text, required: false, default: "warm and genuine" }
+defaults: { service: write, format: plain, length: short }
+variants: 1
+prompt: |
+  Write a congratulations note{{#recipient}} to {recipient}{{/recipient}} on {occasion}.
+  {{#detail}}Make it personal with: {detail}.{{/detail}}
+  Tone: {tone}. Be specific and sincere — name what they achieved and what it says
+  about them; skip generic filler. Keep it short. Do NOT invent details — use
+  [bracketed placeholders] if needed.

@@ -1,0 +1,21 @@
+id: teacher-note
+name: Note to a teacher
+category: everyday
+description: A clear, respectful note from a parent or guardian to a teacher.
+fields:
+  - { key: teacher, label: "Teacher's name", type: text, required: false }
+  - { key: child, label: "Your child's name / class", type: text, required: false }
+  - { key: purpose, label: "What the note is about", type: textarea, required: true }
+  - { key: ask, label: "What you're asking for (optional)", type: text, required: false }
+  - { key: tone, label: "Tone", type: text, required: false, default: "courteous and collaborative" }
+defaults: { service: write, format: plain, length: short }
+variants: 1
+prompt: |
+  Write a note to {{#teacher}}{teacher}{{/teacher}}{{^teacher}}the teacher{{/teacher}}
+  from a parent or guardian{{#child}} about {child}{{/child}}.
+  Purpose: {purpose}.
+  {{#ask}}Specific request: {ask}.{{/ask}}
+  Tone: {tone}. Be respectful and partnership-oriented (not adversarial), state
+  the matter and any request clearly, and thank them for their work. Do NOT invent
+  names, dates, or incidents not provided — use [bracketed placeholders]. Keep it
+  brief.

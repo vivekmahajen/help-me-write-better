@@ -1,0 +1,19 @@
+id: dating-profile
+name: Dating profile
+category: everyday
+description: A genuine, specific dating-app bio that sounds like a real person.
+fields:
+  - { key: about, label: "About you (work, interests, vibe)", type: textarea, required: true }
+  - { key: looking_for, label: "What you're looking for (optional)", type: textarea, required: false }
+  - { key: vibe, label: "Vibe (playful, sincere, witty, …)", type: text, required: false, default: "warm and a little playful" }
+  - { key: length_pref, label: "Length", type: text, required: false, default: "short — a few punchy lines" }
+defaults: { service: write, format: plain }
+variants: 2
+prompt: |
+  Write a dating-app profile bio for this person: {about}.
+  {{#looking_for}}What they're looking for: {looking_for}.{{/looking_for}}
+  Vibe: {vibe}. Length: {length_pref}. Be specific and concrete — real interests,
+  a little humor, an easy conversation hook. Avoid clichés ("love to laugh",
+  "fluent in sarcasm", "partner in crime") and generic filler, and sound like a
+  real person — confident, not bragging. Do NOT invent facts about them not
+  provided — use [bracketed placeholders]. Offer 2 distinct versions.
