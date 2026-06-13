@@ -3,6 +3,20 @@
 ## Unreleased — Trust Layer
 
 ### Added
+- **Long-form manuscript context + `continuity`** (Gap-4 depth, PR-4): rewriting
+  requests accept a typed `context` — a string or `{text, role}` with role
+  `preceding_manuscript | outline | style_reference` — injected as a role-specific
+  CONTEXT block (new `context.py`). Over-budget context is **front-trimmed**
+  (oldest dropped, recent kept) and reported via `context_truncated:
+  {kept_chars, dropped_chars}` — **never silent** (this replaces the gateway's
+  prior omit-and-warn). Long context **routes premium**. New `continuity` service
+  (analysis) flags name/fact/tense/POV contradictions against the context;
+  `voice.voice_drift` gives a deterministic style-drift signal. Two DI'd evals
+  (`continuity_eval`, `voice_consistency_eval`). Services 44 → 45.
+
+  > **Matrix consequence:** creative/fiction **Partial → Full** — context is now
+  > typed, budgeted (never silently dropped), continuity-checkable, and
+  > eval-gated.
 - **Four new services** (Gap-4 depth, PR-5): `merge` (premium — combine drafts
   into one document with a kept/dropped/merged decision log; conflicting facts
   flagged, never silently resolved; accepts a `texts: []` array folded into

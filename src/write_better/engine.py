@@ -12,6 +12,7 @@ from dataclasses import dataclass, field
 
 from .modes import Mode, resolve_services
 from .prompt import build_user_message, system_prompt
+from . import context as ctx
 from . import length
 
 # Model IDs are the current Claude models (see README for the routing rationale).
@@ -45,6 +46,7 @@ class Request:
     effort: str = "high"            # low | medium | high | max (thinking models only)
     style_guide: str | None = None  # team brand-voice rules injected by the gateway
     context: str | None = None      # preceding manuscript for long-form consistency
+    context_role: str = "preceding_manuscript"  # preceding_manuscript | outline | style_reference
     protected_terms: list[str] = field(default_factory=list)  # personal "never-flag" dictionary
     voice_profile: str | None = None  # rendered personal voice profile ("sounds like me")
     max_chars: int | None = None    # strict_limit: hard character cap on the output
@@ -63,6 +65,7 @@ class Result:
     limit_met: bool | None = None   # None = no limit asked; True/False = strict_limit outcome
     char_count: int = 0
     word_count: int = 0
+    context_truncated: dict | None = None  # {kept_chars, dropped_chars} if context was front-trimmed
 
 
 def route_model(modes: list[Mode]) -> str:
@@ -91,7 +94,8 @@ def _limit_phrase(req: Request) -> str:
 
 
 def _build_call_kwargs(req: Request, modes: list[Mode], model: str,
-                       hard_limit: str | None = None) -> dict:
+                       hard_limit: str | None = None,
+                       context_text: str | None = None) -> dict:
     kwargs: dict = {
         "model": model,
         "max_tokens": _MAX_TOKENS,
@@ -114,7 +118,8 @@ def _build_call_kwargs(req: Request, modes: list[Mode], model: str,
                         (m.name, m.instruction) for m in modes if m.instruction
                     ],
                     style_guide=req.style_guide,
-                    context=req.context,
+                    context=context_text if context_text is not None else req.context,
+                    context_role=req.context_role,
                     protected_terms=req.protected_terms,
                     voice_profile=req.voice_profile,
                     hard_limit=hard_limit,
@@ -140,6 +145,14 @@ def improve(req: Request, *, client=None, stream_to=None) -> Result:
     modes = resolve_services(req.services) if req.services else resolve_services("clarify")
     model = req.model or route_model(modes)
 
+    # Long-form context: front-trim to budget (never silent), and promote a
+    # large-context job to the premium model — it needs the headroom and care.
+    context_text, context_truncated = (None, None)
+    if req.context:
+        context_text, context_truncated = ctx.budget(req.context)
+        if req.model is None and model != PREMIUM_MODEL and ctx.is_long(context_text):
+            model = PREMIUM_MODEL
+
     if client is None:
         import anthropic  # imported lazily so tests / --dry-run don't need the SDK
 
@@ -154,7 +167,8 @@ def improve(req: Request, *, client=None, stream_to=None) -> Result:
         return "".join(b.text for b in message.content if b.type == "text")
 
     def _call(hard_limit: str | None):
-        kwargs = _build_call_kwargs(req, modes, model, hard_limit=hard_limit)
+        kwargs = _build_call_kwargs(req, modes, model, hard_limit=hard_limit,
+                                    context_text=context_text)
         if use_stream:
             with client.messages.stream(**kwargs) as stream:
                 for chunk in stream.text_stream:
@@ -201,6 +215,7 @@ def improve(req: Request, *, client=None, stream_to=None) -> Result:
         limit_met=limit_met,
         char_count=length.count_chars(text),
         word_count=length.count_words(text),
+        context_truncated=context_truncated,
     )
 
 

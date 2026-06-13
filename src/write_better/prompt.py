@@ -14,6 +14,19 @@ VALID_FORMATS = (
     "markdown", "html", "plain", "rich-text", "email", "report", "doc", "slide-outline",
 )
 
+# Role-specific CONTEXT block headers (see context.py for the typed input).
+_CONTEXT_HEADERS = {
+    "preceding_manuscript": (
+        "CONTEXT (preceding manuscript — keep voice, names, facts, canon, and tense "
+        "consistent with it and continue naturally; do not summarize, quote, or alter it):"),
+    "outline": (
+        "CONTEXT (outline / plan — follow its structure, intent, and beats; flesh it out "
+        "in prose, do not copy it verbatim or treat it as text to edit):"),
+    "style_reference": (
+        "CONTEXT (style reference — match its voice, register, and rhythm; do NOT reuse "
+        "its content, facts, or specifics):"),
+}
+
 
 @lru_cache(maxsize=1)
 def system_prompt() -> str:
@@ -70,6 +83,7 @@ def build_user_message(
     service_instructions: list[tuple[str, str]] | None = None,
     style_guide: str | None = None,
     context: str | None = None,
+    context_role: str = "preceding_manuscript",
     protected_terms: list[str] | None = None,
     voice_profile: str | None = None,
     hard_limit: str | None = None,
@@ -109,8 +123,7 @@ def build_user_message(
 
     if context:
         lines.append("")
-        lines.append("CONTEXT (preceding manuscript — keep voice, facts, and canon "
-                     "consistent with it; do not summarize, quote, or alter it):")
+        lines.append(_CONTEXT_HEADERS.get(context_role, _CONTEXT_HEADERS["preceding_manuscript"]))
         lines.append('"""')
         lines.append(context)
         lines.append('"""')
