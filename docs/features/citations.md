@@ -7,8 +7,10 @@ fields").
 
 > **Scope note:** rather than bundle `citeproc-py` + the full CSL repo, this ships
 > focused, regression-fixtured formatters for the launch styles (**APA 7, MLA 9,
-> Chicago author-date**) over the common types (journal article, book, webpage).
-> The CSL-JSON intermediate allows swapping in a full CSL engine later.
+> Chicago author-date, Harvard, IEEE**) across four item types (journal article,
+> book, chapter, webpage), plus **BibTeX** export. An unbundled style renders in
+> APA **with a warning** — never a silent substitution. The CSL-JSON intermediate
+> allows swapping in a full CSL engine later; see `docs/decisions/ADR-002-csl.md`.
 
 ## Request
 

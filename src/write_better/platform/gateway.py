@@ -378,6 +378,10 @@ def _cite(store, http, user, environ, start_response):
     store.insert_usage(user["id"], "citation_generated", "none", premium=False,
                        input_tokens=0, output_tokens=0,
                        issue_types={it["resolver"]: 1 for it in result["items"]})
+    # Adoption breakdown by citation style.
+    store.insert_usage(user["id"], "cite_style", "none", premium=False,
+                       input_tokens=0, output_tokens=0,
+                       issue_types={result["style"]: 1})
     return _json(start_response, "200 OK", result)
 
 
@@ -515,6 +519,9 @@ def _goals(store, user, method, environ, start_response):
         selected = goals_mod.normalize(data.get("goals"))
         prefs["goals"] = selected
         store.set_preferences(uid, prefs)
+        store.insert_usage(uid, "goal_set", "none", premium=False,
+                           input_tokens=0, output_tokens=0,
+                           issue_types={g: 1 for g in selected})
         return _json(start_response, "200 OK",
                      {"goals": selected, "trend": goals_mod.trend(store, uid, selected)})
     return _json(start_response, "405 Method Not Allowed", {"error": "use GET or PUT"})
@@ -830,6 +837,14 @@ def _improve(store, engine, user, environ, start_response):
         store.insert_usage(user["id"], "template_used", "none", premium=False,
                            input_tokens=0, output_tokens=0,
                            issue_types={data["template"]: 1})
+    # Feature-adoption events for the depth services.
+    mode_names = {m.name for m in modes}
+    if "merge" in mode_names:
+        store.insert_usage(user["id"], "merge_run", "none", premium=False,
+                           input_tokens=0, output_tokens=0)
+    if "argument-check" in mode_names:
+        store.insert_usage(user["id"], "argument_check_run", "none", premium=False,
+                           input_tokens=0, output_tokens=0)
     if warnings:
         body["warnings"] = warnings
     return _json(start_response, "200 OK", body)

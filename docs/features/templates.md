@@ -5,6 +5,11 @@ through the existing `write` service. **Adding a YAML file makes the template
 appear in the API, CLI, and UI with no code change** — the `fields` schema drives
 dynamic forms.
 
+Three categories ship today: **26 marketing**, **16 everyday-life** (cover
+letter, complaint, condolence, resignation, …), and the **creative** set. The
+char-limited assets (Google RSA, app-store listing) declare their platform limits
+in-prompt and pair with the `strict_limit` guarantee (`max_chars` / `max_words`).
+
 ## Template files
 
 `src/write_better/templates/<category>/*.yaml` (shipped as package data):
